@@ -145,15 +145,13 @@ public class HtmlTemplateService {
      * Renders password reset template.
      */
     public String passwordResetEmail(String fullName, String link) {
-        return renderEmail(
-                "Reset your password and regain access to TMS AI.",
-                "Password reset",
-                "🔒",
-                "Hello " + escape(fullName) + ",",
+        return renderModernEmail(
+                fullName,
+                "Reset Your Password",
                 "You requested to reset your password. Click the button below to set a new one.",
-                "Set new password",
+                "Set New Password",
                 link,
-                "The link is valid for 2 hours. If you didn't request this, you can ignore this email."
+                "This link will expire in 2 hours. If you didn't request this, you can safely ignore this email."
         );
     }
 
@@ -161,15 +159,13 @@ public class HtmlTemplateService {
      * Renders email change confirmation template.
      */
     public String emailChangeConfirmEmail(String fullName, String link) {
-        return renderEmail(
-                "Confirm your new email to complete the change.",
-                "Confirm new email",
-                "✉️",
-                "Hello " + escape(fullName) + ",",
-                "Please confirm this new email address to complete the change for your <b>TMS&nbsp;AI</b> account.",
-                "Confirm new email",
+        return renderModernEmail(
+                fullName,
+                "Confirm Your New Email",
+                "Please confirm this new email address to complete the change for your Messagepoint TMS account.",
+                "Confirm New Email",
                 link,
-                "The link is valid for 24 hours. If you didn't request this change, please ignore this email."
+                "This link will expire in 24 hours. If you didn't request this change, you can safely ignore this email."
         );
     }
 
@@ -177,16 +173,14 @@ public class HtmlTemplateService {
      * Renders group invitation template.
      */
     public String groupInviteEmail(String inviteeName, String groupName, String inviterName, String link) {
-        return renderEmail(
-                "Join the group \"" + escape(groupName) + "\" on TMS AI.",
-                "Group invitation",
-                "👥",
-                "Hello " + escape(inviteeName) + ",",
-                "<b>%s</b> invited you to join the group <b>%s</b> on <b>TMS&nbsp;AI</b>. Click the button below to accept the invitation with this email address."
+        return renderModernEmail(
+                inviteeName,
+                "Group Invitation",
+                "%s invited you to join the group \"%s\" on Messagepoint TMS. Click the button below to accept the invitation."
                         .formatted(escape(inviterName), escape(groupName)),
-                "Accept invitation",
+                "Accept Invitation",
                 link,
-                "This link is valid for 72 hours. If you weren't expecting this, you can ignore this email."
+                "This link will expire in 72 hours. If you weren't expecting this invitation, you can safely ignore this email."
         );
     }
 
@@ -441,100 +435,5 @@ public class HtmlTemplateService {
                 """.formatted(escape(loginUrl));
     }
 
-    // ========================================================================
-    // Private Helpers
-    // ========================================================================
-
-    /**
-     * Renders polished dark-themed HTML email layout.
-     * NOTE: percent signs are doubled (%%) for String.format compatibility.
-     */
-    private String renderEmail(
-            String preheader,
-            String title,
-            String emoji,
-            String greeting,
-            String messageHtml,
-            String buttonLabel,
-            String buttonLink,
-            String footerText
-    ) {
-        String safePre = escape(preheader);
-        String safeTitle = escape(title);
-        String safeBtnLabel = escape(buttonLabel);
-        String safeBtnLink = escape(buttonLink);
-
-        return """
-        <!doctype html>
-        <html lang="en">
-        <head>
-          <meta charset="utf-8"/>
-          <meta name="viewport" content="width=device-width,initial-scale=1"/>
-          <title>%s • TMS AI</title>
-          <style>
-            :root { --bg:#0b0f1a; --card:#0f1524; --muted:#94a3b8; --text:#e5e7eb; --line:#1f2937; --accent1:#22d3ee; --accent2:#8b5cf6; }
-            html,body{height:100%%}
-            body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,Segoe UI,Arial,sans-serif;-webkit-font-smoothing:antialiased}
-            .bar{height:3px;background:linear-gradient(90deg,var(--accent1),var(--accent2),var(--accent1));opacity:.85}
-            .wrap{min-height:calc(100vh - 3px);display:grid;place-items:center;padding:24px}
-            .card{max-width:640px;width:100%%;background:color-mix(in srgb, var(--card) 95%%, transparent);
-                  border:1px solid var(--line);border-radius:16px;padding:28px;position:relative;box-shadow:0 12px 40px rgba(0,0,0,.45)}
-            .glow{position:absolute;inset:-1px;border-radius:16px;pointer-events:none;background:linear-gradient(90deg,var(--accent1),var(--accent2),var(--accent1));
-                  mask:linear-gradient(#000,#000) content-box,linear-gradient(#000,#000);-webkit-mask-composite:xor;mask-composite:exclude;padding:1px;opacity:.55}
-            .badge{width:64px;height:64px;margin:8px auto 16px;border-radius:999px;display:grid;place-items:center;border:1px solid #164e63;
-                   background:radial-gradient(80%% 80%% at 50%% 20%%,color-mix(in srgb,var(--accent1) 30%%,transparent),transparent)}
-            h1{margin:0 0 8px;font-size:28px;letter-spacing:.2px;background:linear-gradient(90deg,var(--accent1),var(--accent2));
-               -webkit-background-clip:text;background-clip:text;color:transparent}
-            p{margin:6px 0 0;color:var(--text)}
-            .muted{color:var(--muted)}
-            .cta{display:inline-block;margin-top:18px;background:linear-gradient(90deg,var(--accent1),var(--accent2));
-                 color:#000 !important;text-decoration:none;font-weight:700;padding:12px 18px;border-radius:10px}
-            .hr{height:1px;background:linear-gradient(90deg,transparent,var(--line),transparent);margin:18px 0}
-            .code{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;
-                  background:#0b1222;border:1px solid var(--line);border-radius:8px;padding:10px;color:#cbd5e1;word-break:break-all}
-            .footer{margin-top:16px;font-size:12px;color:#64748b}
-            .preheader{display:none !important;visibility:hidden;opacity:0;color:transparent;height:0;width:0;overflow:hidden}
-            .container{padding:0 4px}
-            @media (max-width:480px){ .card{padding:22px;border-radius:14px} h1{font-size:24px} }
-          </style>
-        </head>
-        <body>
-          <span class="preheader">%s</span>
-          <div class="bar"></div>
-          <div class="wrap">
-            <div class="card">
-              <div class="glow"></div>
-
-              <div class="badge">%s</div>
-              <h1>%s</h1>
-
-              <div class="container">
-                <p class="muted">%s</p>
-                <p>%s</p>
-
-                <p><a class="cta" href="%s">%s</a></p>
-
-                <div class="hr"></div>
-                <p class="muted" style="font-size:12px;margin-top:10px">If the button doesn't work, copy and paste this URL:</p>
-                <div class="code">%s</div>
-
-                <p class="footer">%s</p>
-              </div>
-            </div>
-          </div>
-        </body>
-        </html>
-        """.formatted(
-                safeTitle,
-                safePre,
-                escape(emoji),
-                safeTitle,
-                greeting,
-                messageHtml,
-                safeBtnLink, safeBtnLabel,
-                safeBtnLink,
-                escape(footerText)
-        );
-    }
 }
 
