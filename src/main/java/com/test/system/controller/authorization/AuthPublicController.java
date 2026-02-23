@@ -5,7 +5,6 @@ import com.test.system.dto.authorization.auth.LoginRequest;
 import com.test.system.dto.authorization.auth.RegisterRequest;
 import com.test.system.dto.authorization.common.StatusResponse;
 import com.test.system.dto.authorization.password.ResetPasswordRequest;
-import com.test.system.service.HtmlTemplateService;
 import com.test.system.service.authorization.user.UserAuthenticationService;
 import com.test.system.utils.logging.LoggingUtils;
 import io.swagger.v3.oas.annotations.Operation;
@@ -32,7 +31,6 @@ public class AuthPublicController {
     private static final Logger log = LoggerFactory.getLogger(AuthPublicController.class);
 
     private final UserAuthenticationService authService;
-    private final HtmlTemplateService htmlTemplates;
 
     @Operation(
             summary = "Register new user",
@@ -65,24 +63,14 @@ public class AuthPublicController {
         return ResponseEntity.ok(StatusResponse.ok());
     }
 
+    @Operation(
+            summary = "Verify email address",
+            description = "Verify user email using the token sent via email"
+    )
     @PostMapping("/verify")
     public ResponseEntity<Void> verify(@RequestParam("token") String token) {
         authService.verifyUserEmail(token);
         return ResponseEntity.noContent().build();
-    }
-
-    @GetMapping(value = "/verify", produces = MediaType.TEXT_HTML_VALUE)
-    public ResponseEntity<String> verifyPage(@RequestParam("token") String token) {
-        try {
-            authService.verifyUserEmail(token);
-            return ResponseEntity.ok()
-                    .contentType(MediaType.TEXT_HTML)
-                    .body(htmlTemplates.emailVerificationSuccess());
-        } catch (IllegalArgumentException ex) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .contentType(MediaType.TEXT_HTML)
-                    .body(htmlTemplates.emailVerificationError());
-        }
     }
 
     @Operation(
@@ -91,7 +79,7 @@ public class AuthPublicController {
                     Authenticate with email and password to receive a JWT token.
 
                     **Steps to use the token in Swagger:**
-                    1. Copy the `token` value from the response
+                    1. Copy the token value from the response
                     2. Click the 🔓 Authorize button at the top of this page
                     3. Paste the token (without "Bearer " prefix)
                     4. Click Authorize, then Close
@@ -123,8 +111,7 @@ public class AuthPublicController {
                                                     """
                                     )
                             )
-                    ),
-                    @ApiResponse(responseCode = "401", description = "Invalid credentials")
+                    )
             }
     )
     @PostMapping("/login")
@@ -173,4 +160,3 @@ public class AuthPublicController {
         return ResponseEntity.ok(StatusResponse.ok());
     }
 }
-

@@ -45,7 +45,8 @@ public class MailService {
      * Email verification (new account).
      */
     public void sendEmailVerification(String to, String fullName, String rawToken) {
-        String link = buildLink("/api/auth/verify", rawToken);
+        // Changed: now points to frontend /verify page instead of backend API
+        String link = buildAppLink("/verify", rawToken);
         String subject = "Confirm your email";
         String html = htmlTemplates.emailVerificationEmail(fullName, link);
 
@@ -59,7 +60,8 @@ public class MailService {
      * Password reset.
      */
     public void sendPasswordReset(String to, String fullName, String rawToken) {
-        String link = buildLink("/api/auth/password/reset", rawToken);
+        // Changed: now points to frontend /reset-password page instead of backend API
+        String link = buildAppLink("/reset-password", rawToken);
         String subject = "Reset your password";
         String html = htmlTemplates.passwordResetEmail(fullName, link);
 
@@ -73,7 +75,8 @@ public class MailService {
      * Confirm new email (profile email change).
      */
     public void sendEmailChangeConfirm(String toNewEmail, String fullName, String rawToken) {
-        String link = buildLink("/api/auth/email/confirm", rawToken);
+        // Changed: now points to frontend /confirm-email page instead of backend API
+        String link = buildAppLink("/confirm-email", rawToken);
         String subject = "Confirm your new email";
         String html = htmlTemplates.emailChangeConfirmEmail(fullName, link);
 
@@ -166,8 +169,7 @@ public class MailService {
         if (at <= 0) return "***";
         String local = email.substring(0, at);
         String domain = email.substring(at);
-        String prefix = local.length() <= 2 ? local.substring(0, 1) : local.substring(0, 2);
+        String prefix = local.length() == 1 ? local.substring(0, 1) : local.substring(0, 2);
         return prefix + "***" + domain;
     }
 }
-
