@@ -10,6 +10,7 @@ public record JiraIssueDetailsResponse(
         String description,
         String author,
         String priority,
+        String issueType,
         List<AttachmentInfoResponse> attachments
 ) {}
 

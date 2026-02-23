@@ -3,6 +3,7 @@ package com.test.system.controller.jira;
 import com.test.system.dto.jira.connection.JiraConnectionResponse;
 import com.test.system.dto.jira.connection.SaveConnectionRequest;
 import com.test.system.dto.jira.issue.CreateIssueRequest;
+import com.test.system.dto.jira.issue.DetailedIssueStatsResponse;
 import com.test.system.dto.jira.issue.ProjectIssueStatsResponse;
 import com.test.system.dto.jira.issue.TestCaseIssueResponse;
 import com.test.system.service.jira.JiraConnectionService;
@@ -96,6 +97,14 @@ public class JiraIntegrationController {
             @RequestParam(name = "projectIds", required = false) List<Long> projectIds
     ) {
         return projectStatsService.getProjectsStats(groupId, projectIds);
+    }
+
+    @GetMapping("/projects-stats-detailed/{groupId}")
+    public DetailedIssueStatsResponse getDetailedProjectsStats(
+            @PathVariable Long groupId,
+            @RequestParam(name = "projectIds", required = false) List<Long> projectIds
+    ) {
+        return projectStatsService.getDetailedProjectsStats(groupId, projectIds);
     }
 
 }

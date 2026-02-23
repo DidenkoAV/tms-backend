@@ -139,9 +139,10 @@ public class SecurityConfig {
                 "https://www.testforge.ca"
         ));
         cfg.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        cfg.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Requested-With", "Origin", "Accept"));
+        cfg.setAllowedHeaders(List.of("*")); // Allow all headers for preflight
         cfg.setExposedHeaders(List.of("Location"));
         cfg.setAllowCredentials(true);
+        cfg.setMaxAge(3600L); // Cache preflight response for 1 hour
 
         UrlBasedCorsConfigurationSource src = new UrlBasedCorsConfigurationSource();
         src.registerCorsConfiguration("/**", cfg);

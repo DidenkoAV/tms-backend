@@ -40,9 +40,10 @@ public class JiraResponseParser {
         String description = extractDescription(fields);
         String author = extractAuthor(fields);
         String priority = extractPriority(fields);
+        String issueType = extractIssueType(fields);
         List<AttachmentInfoResponse> attachments = extractAttachments(fields);
 
-        return new JiraIssueDetailsResponse(status, summary, description, author, priority, attachments);
+        return new JiraIssueDetailsResponse(status, summary, description, author, priority, issueType, attachments);
     }
 
     /**
@@ -107,6 +108,16 @@ public class JiraResponseParser {
         Object priorityObj = fields.get("priority");
         if (priorityObj instanceof Map<?, ?> priorityMap) {
             Object nameObj = priorityMap.get("name");
+            return nameObj instanceof String s ? s : "";
+        }
+        return "";
+    }
+
+    @SuppressWarnings("unchecked")
+    private String extractIssueType(Map<String, Object> fields) {
+        Object issueTypeObj = fields.get("issuetype");
+        if (issueTypeObj instanceof Map<?, ?> issueTypeMap) {
+            Object nameObj = issueTypeMap.get("name");
             return nameObj instanceof String s ? s : "";
         }
         return "";
