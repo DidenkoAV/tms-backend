@@ -1,0 +1,176 @@
+package com.test.system.controller.authorization;
+
+import com.test.system.dto.authorization.auth.AuthenticationResponse;
+import com.test.system.dto.authorization.auth.LoginRequest;
+import com.test.system.dto.authorization.auth.RegisterRequest;
+import com.test.system.dto.authorization.common.StatusResponse;
+import com.test.system.dto.authorization.password.ResetPasswordRequest;
+import com.test.system.service.HtmlTemplateService;
+import com.test.system.service.authorization.user.UserAuthenticationService;
+import com.test.system.utils.logging.LoggingUtils;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.*;
+import org.springframework.web.bind.annotation.*;
+
+import static com.test.system.utils.auth.AuthWebUtils.safeEmail;
+
+@RestController
+@RequestMapping("/api/auth")
+@RequiredArgsConstructor
+@Tag(name = "Auth Public Controller", description = "Public authentication endpoints (no auth required)")
+public class AuthPublicController {
+
+    private static final Logger log = LoggerFactory.getLogger(AuthPublicController.class);
+
+    private final UserAuthenticationService authService;
+    private final HtmlTemplateService htmlTemplates;
+
+    @Operation(
+            summary = "Register new user",
+            description = """
+                    Register a new user account. After registration, a verification email will be sent.
+                    The user must verify their email before they can login.
+                    """,
+            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    content = @Content(
+                            examples = @ExampleObject(
+                                    value = """
+                                            {
+                                              "email": "user@example.com",
+                                              "password": "SecurePass123!",
+                                              "fullName": "John Doe"
+                                            }
+                                            """
+                            )
+                    )
+            )
+    )
+    @PostMapping("/register")
+    public ResponseEntity<StatusResponse> register(@RequestBody @Valid RegisterRequest req) {
+        String email = safeEmail(req.email());
+        log.info("Registration attempt for email: {}", email);
+
+        authService.registerNewUser(email, req.password(), req.fullName());
+
+        LoggingUtils.logAuthEvent(log, "REGISTER", email, true);
+        return ResponseEntity.ok(StatusResponse.ok());
+    }
+
+    @PostMapping("/verify")
+    public ResponseEntity<Void> verify(@RequestParam("token") String token) {
+        authService.verifyUserEmail(token);
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping(value = "/verify", produces = MediaType.TEXT_HTML_VALUE)
+    public ResponseEntity<String> verifyPage(@RequestParam("token") String token) {
+        try {
+            authService.verifyUserEmail(token);
+            return ResponseEntity.ok()
+                    .contentType(MediaType.TEXT_HTML)
+                    .body(htmlTemplates.emailVerificationSuccess());
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .contentType(MediaType.TEXT_HTML)
+                    .body(htmlTemplates.emailVerificationError());
+        }
+    }
+
+    @Operation(
+            summary = "Login and get JWT token",
+            description = """
+                    Authenticate with email and password to receive a JWT token.
+
+                    **Steps to use the token in Swagger:**
+                    1. Copy the `token` value from the response
+                    2. Click the 🔓 Authorize button at the top of this page
+                    3. Paste the token (without "Bearer " prefix)
+                    4. Click Authorize, then Close
+                    5. All authenticated endpoints will now work
+                    """,
+            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    content = @Content(
+                            examples = @ExampleObject(
+                                    value = """
+                                            {
+                                              "email": "user@example.com",
+                                              "password": "SecurePass123!"
+                                            }
+                                            """
+                            )
+                    )
+            ),
+            responses = {
+                    @ApiResponse(
+                            responseCode = "200",
+                            description = "Login successful, JWT token returned",
+                            content = @Content(
+                                    examples = @ExampleObject(
+                                            value = """
+                                                    {
+                                                      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+                                                      "tokenType": "Bearer"
+                                                    }
+                                                    """
+                                    )
+                            )
+                    ),
+                    @ApiResponse(responseCode = "401", description = "Invalid credentials")
+            }
+    )
+    @PostMapping("/login")
+    public ResponseEntity<AuthenticationResponse> login(
+            @RequestBody @Valid LoginRequest req,
+            HttpServletRequest request
+    ) {
+        String email = safeEmail(req.email());
+        log.info("Login attempt for email: {}", email);
+
+        try {
+            ResponseEntity<AuthenticationResponse> response = authService.authenticateUser(email, req.password(), request);
+            LoggingUtils.logAuthEvent(log, "LOGIN", email, true);
+            return response;
+        } catch (Exception e) {
+            LoggingUtils.logAuthEvent(log, "LOGIN", email, false);
+            throw e;
+        }
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(HttpServletRequest request) {
+        log.info("Logout request");
+        LoggingUtils.logAuthEvent(log, "LOGOUT", "user", true);
+        return authService.logoutUser(request);
+    }
+
+    @PostMapping("/verification/resend")
+    public ResponseEntity<StatusResponse> resend(@RequestParam("email") String email) {
+        authService.resendEmailVerification(safeEmail(email));
+        return ResponseEntity.ok(StatusResponse.sent());
+    }
+
+    @PostMapping("/password/request-reset")
+    public ResponseEntity<StatusResponse> requestReset(@RequestParam("email") String email) {
+        authService.initiatePasswordReset(safeEmail(email));
+        return ResponseEntity.ok(StatusResponse.sent());
+    }
+
+    @PostMapping("/password/reset")
+    public ResponseEntity<StatusResponse> reset(
+            @RequestParam("token") String token,
+            @RequestBody ResetPasswordRequest body
+    ) {
+        authService.completePasswordReset(token, body.newPassword());
+        return ResponseEntity.ok(StatusResponse.ok());
+    }
+}
+
