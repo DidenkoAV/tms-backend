@@ -67,6 +67,7 @@ public class UserRegistrationService {
                 .password(encoder.encode(rawPassword))
                 .fullName(resolveFullNameOrDefault(fullName, normEmail))
                 .enabled(false)
+                .role(RoleName.ROLE_USER)
                 .build();
         user.getRoles().add(roleUser);
 
@@ -151,6 +152,7 @@ public class UserRegistrationService {
                 .password(randomInternalPassword)
                 .fullName(fullName)
                 .enabled(true)
+                .role(RoleName.ROLE_USER)
                 .build();
         user.getRoles().add(roleUser);
 

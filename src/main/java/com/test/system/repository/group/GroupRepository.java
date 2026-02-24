@@ -43,4 +43,13 @@ public interface GroupRepository extends JpaRepository<Group, Long> {
     @Query("SELECT g FROM Group g WHERE g.owner.id = :ownerId AND g.personal = true")
     Optional<Group> findPersonalGroup(@Param("ownerId") Long ownerId);
 
+    /**
+     * Find all groups owned by a user.
+     *
+     * @param ownerId the user ID (owner of the groups)
+     * @return list of groups owned by the user
+     */
+    @Query("SELECT g FROM Group g WHERE g.owner.id = :ownerId")
+    List<Group> findAllByOwnerId(@Param("ownerId") Long ownerId);
+
 }

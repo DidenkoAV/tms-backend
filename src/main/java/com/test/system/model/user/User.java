@@ -1,5 +1,6 @@
 package com.test.system.model.user;
 
+import com.test.system.enums.auth.RoleName;
 import com.test.system.model.group.Group;
 import com.test.system.model.group.GroupMembership;
 import jakarta.persistence.*;
@@ -32,6 +33,15 @@ public class User {
 
     @Builder.Default
     private boolean enabled = true;
+
+    /**
+     * Primary user role (denormalized from user_roles for simplified queries).
+     * ROLE_ADMIN takes precedence over ROLE_USER.
+     * The many-to-many relationship in roles remains the source of truth.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 32)
+    private RoleName role;
 
     @Builder.Default
     private Instant createdAt = Instant.now();
