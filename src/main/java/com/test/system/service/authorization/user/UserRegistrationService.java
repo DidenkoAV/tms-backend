@@ -179,23 +179,35 @@ public class UserRegistrationService {
                 .owner(user)
                 .personal(true)
                 .build();
-        Group savedGroup = groups.save(group);
 
-        log.info("{} group created (personal): groupId={}, ownerId={}, name='{}'",
-                LOG_PREFIX, savedGroup.getId(), user.getId(), savedGroup.getName());
+        try {
+            Group savedGroup = groups.save(group);
 
-        GroupMembership membership = GroupMembership.builder()
-                .group(savedGroup)
-                .user(user)
-                .role(GroupRole.OWNER)
-                .status(MembershipStatus.ACTIVE)
-                .build();
-        memberships.save(membership);
+            log.info("{} group created (personal): groupId={}, ownerId={}, name='{}'",
+                    LOG_PREFIX, savedGroup.getId(), user.getId(), savedGroup.getName());
 
-        log.info("{} membership created: groupId={}, userId={}, role=OWNER, status=ACTIVE",
-                LOG_PREFIX, savedGroup.getId(), user.getId());
+            GroupMembership membership = GroupMembership.builder()
+                    .group(savedGroup)
+                    .user(user)
+                    .role(GroupRole.OWNER)
+                    .status(MembershipStatus.ACTIVE)
+                    .build();
+            memberships.save(membership);
 
-        return savedGroup;
+            log.info("{} membership created: groupId={}, userId={}, role=OWNER, status=ACTIVE",
+                    LOG_PREFIX, savedGroup.getId(), user.getId());
+
+            return savedGroup;
+        } catch (Exception e) {
+            // Handle race condition: another thread may have created the personal group
+            // Re-fetch and return the existing group
+            log.warn("{} race condition detected while creating personal group for userId={}, retrying fetch",
+                    LOG_PREFIX, user.getId());
+            Group retryExisting = groups.findPersonalGroup(user.getId())
+                    .orElseThrow(() -> new IllegalStateException("Failed to create or find personal group"));
+            ensureOwnerMembership(retryExisting, user);
+            return retryExisting;
+        }
     }
 
     private void ensureOwnerMembership(Group group, User owner) {

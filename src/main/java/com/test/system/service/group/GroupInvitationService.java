@@ -64,6 +64,11 @@ public class GroupInvitationService {
         String inviterEmail = normEmail(inviterEmailRaw);
         String inviteeEmail = normEmail(inviteeEmailRaw);
 
+        // Validate email format before proceeding
+        if (!isValidEmail(inviteeEmail)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, GroupError.INVALID_EMAIL.name());
+        }
+
         log.info("{} invite: groupId={}, from={}, to={}", LOG_PREFIX, groupId, inviterEmail, inviteeEmail);
 
         Group group = accessControl.requireGroup(groupId);
@@ -157,8 +162,9 @@ public class GroupInvitationService {
             return;
         }
 
+        // Check limit for both new members and reactivating REMOVED members
         int activeCount = memberships.countMembershipsByStatus(groupId, MembershipStatus.ACTIVE);
-        if (existing == null && activeCount >= maxMembers) {
+        if (activeCount >= maxMembers) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, GroupError.LIMIT_REACHED.name());
         }
 
@@ -249,5 +255,18 @@ public class GroupInvitationService {
         return Base64.getUrlEncoder()
                 .withoutPadding()
                 .encodeToString(v.getBytes(StandardCharsets.UTF_8));
+    }
+
+    /**
+     * Validates email format using regex pattern.
+     * Pattern matches the database constraint in users table.
+     */
+    private static boolean isValidEmail(String email) {
+        if (email == null || email.isEmpty()) {
+            return false;
+        }
+        // Same pattern as database constraint: ^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$
+        String emailPattern = "^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$";
+        return email.matches(emailPattern);
     }
 }

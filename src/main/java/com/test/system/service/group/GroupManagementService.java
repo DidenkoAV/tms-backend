@@ -130,15 +130,7 @@ public class GroupManagementService {
         }
 
         g.setName(next);
-        try {
-            var updatedAtField = Group.class.getDeclaredField("updatedAt");
-            updatedAtField.setAccessible(true);
-            updatedAtField.set(g, Instant.now());
-        } catch (NoSuchFieldException ignored) {
-            // no updatedAt field
-        } catch (IllegalAccessException e) {
-            log.warn("{} failed to set updatedAt on Group: {}", LOG_PREFIX, e.getMessage());
-        }
+        g.setUpdatedAt(Instant.now());
 
         groups.save(g);
         log.info("{} group renamed: groupId={}, name='{}', by={}",
@@ -166,6 +158,12 @@ public class GroupManagementService {
         }
         if (g.isPersonal()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, GroupError.CANNOT_DELETE_PERSONAL.name());
+        }
+
+        // Delete all pending invitation tokens before deleting memberships
+        List<GroupMembership> allMemberships = memberships.findGroupMembershipsByStatus(groupId, MembershipStatus.PENDING);
+        for (GroupMembership membership : allMemberships) {
+            tokens.deleteActiveTokens(membership.getUser().getId(), TokenType.GROUP_INVITE);
         }
 
         memberships.deleteAllMemberships(g.getId());

@@ -56,5 +56,11 @@ public class Group {
     @Builder.Default
     @Column(nullable = false)
     private Instant createdAt = Instant.now();
+
+    /**
+     * Last update timestamp (UTC).
+     */
+    @Column(nullable = true)
+    private Instant updatedAt;
 }
 
