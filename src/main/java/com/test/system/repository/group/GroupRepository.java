@@ -2,6 +2,7 @@ package com.test.system.repository.group;
 
 import com.test.system.model.group.Group;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -51,5 +52,16 @@ public interface GroupRepository extends JpaRepository<Group, Long> {
      */
     @Query("SELECT g FROM Group g WHERE g.owner.id = :ownerId")
     List<Group> findAllByOwnerId(@Param("ownerId") Long ownerId);
+
+    /**
+     * Delete all groups owned by a user using native SQL.
+     * This bypasses Hibernate and lets PostgreSQL CASCADE handle related deletions.
+     *
+     * @param ownerId the user ID (owner of the groups)
+     * @return number of groups deleted
+     */
+    @Modifying
+    @Query(value = "DELETE FROM groups WHERE owner_id = :ownerId", nativeQuery = true)
+    int deleteAllByOwnerId(@Param("ownerId") Long ownerId);
 
 }

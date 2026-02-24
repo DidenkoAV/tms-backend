@@ -13,6 +13,7 @@ import com.test.system.repository.group.GroupMembershipRepository;
 import com.test.system.repository.group.GroupRepository;
 import com.test.system.repository.user.UserRepository;
 import com.test.system.service.authorization.core.EmailTokenService;
+import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -40,6 +41,7 @@ public class AdminUserService {
     private final GroupRepository groupRepository;
     private final GroupMembershipRepository membershipRepository;
     private final EmailTokenService tokenService;
+    private final EntityManager entityManager;
 
     /**
      * Lists all users in the system.
@@ -144,12 +146,12 @@ public class AdminUserService {
     /**
      * Deletes a user permanently.
      * Only accessible by administrators.
-     * Cannot delete admin users or yourself.
+     * Cannot delete yourself.
      * Deletes all user data including groups, memberships, tokens, etc. (CASCADE).
      *
      * @param userId user ID to delete
      * @param requesterEmail email of the admin making the request
-     * @throws ResponseStatusException if requester is not an admin, user not found, or trying to delete admin/self
+     * @throws ResponseStatusException if requester is not an admin, user not found, or trying to delete yourself
      */
     @Transactional
     public void deleteUser(Long userId, String requesterEmail) {
@@ -166,36 +168,33 @@ public class AdminUserService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot delete your own account");
         }
 
-        // Cannot delete admin users
-        if (isAdmin(user)) {
-            log.warn("{} deleteUser: attempt to delete admin: userId={}", LOG_PREFIX, userId);
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot delete admin users");
-        }
-
         String deletedEmail = user.getEmail();
 
-        // Delete all groups owned by the user (including personal group)
+        // Step 1: Delete all pending invitation tokens for groups owned by this user
         List<Group> ownedGroups = groupRepository.findAllByOwnerId(userId);
         for (Group group : ownedGroups) {
-            log.info("{} deleteUser: deleting group groupId={}, name='{}', personal={}",
-                    LOG_PREFIX, group.getId(), group.getName(), group.isPersonal());
-
-            // Delete all pending invitation tokens for this group
             List<GroupMembership> pendingMemberships = membershipRepository.findGroupMembershipsByStatus(
                     group.getId(), MembershipStatus.PENDING);
             for (GroupMembership membership : pendingMemberships) {
                 tokenService.deleteActiveTokens(membership.getUser().getId(), TokenType.GROUP_INVITE);
             }
-
-            // Delete the group (CASCADE will delete memberships, projects, etc.)
-            groupRepository.delete(group);
         }
 
-        // Now delete the user (CASCADE will handle user_roles, verification_tokens, api_tokens, etc.)
-        userRepository.delete(user);
+        // Step 2: Delete all groups owned by the user using native SQL (bypasses Hibernate, lets PostgreSQL CASCADE work)
+        int deletedGroups = groupRepository.deleteAllByOwnerId(userId);
+        log.info("{} deleteUser: deleted {} groups for userId={}", LOG_PREFIX, deletedGroups, userId);
+
+        // Step 3: Flush and clear Hibernate session to avoid stale references
+        entityManager.flush();
+        entityManager.clear();
+
+        // Step 4: Re-fetch the user (detached from deleted groups) and delete
+        User userToDelete = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found after group deletion"));
+        userRepository.delete(userToDelete);
 
         log.warn("{} deleteUser: success userId={}, email={}, deletedGroups={}",
-                LOG_PREFIX, userId, deletedEmail, ownedGroups.size());
+                LOG_PREFIX, userId, deletedEmail, deletedGroups);
     }
 
     /**
