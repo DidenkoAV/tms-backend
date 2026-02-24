@@ -2,7 +2,7 @@ package com.test.system.component.testcase.export;
 
 import com.test.system.component.testcase.mapper.LookupDataResolver;
 import com.test.system.component.testcase.mapper.TestCaseMapper;
-import com.test.system.dto.testcase.importexport.SuiteExportDto;
+import com.test.system.dto.testcase.importexport.SuiteImportDto;
 import com.test.system.dto.testcase.importexport.TestCasesExportResponse;
 import com.test.system.dto.testcase.mapper.LookupMaps;
 import com.test.system.dto.testcase.response.TestCaseResponse;
@@ -59,7 +59,7 @@ public class TestCaseExportBuilder {
                 .toList();
 
         // 4. Load and convert suites
-        List<SuiteExportDto> exportedSuites = loadSuites(projectId);
+        List<SuiteImportDto> exportedSuites = loadSuites(projectId);
 
         log.debug("{} Export data built: {} cases, {} suites",
                 LOG_PREFIX, exportedCases.size(), exportedSuites.size());
@@ -77,13 +77,12 @@ public class TestCaseExportBuilder {
      * Load all active suites for a project.
      *
      * @param projectId the project ID
-     * @return list of suite export DTOs
+     * @return list of suite import DTOs
      */
-    private List<SuiteExportDto> loadSuites(Long projectId) {
+    private List<SuiteImportDto> loadSuites(Long projectId) {
         return suiteRepository.findAllActiveByProjectId(projectId)
                 .stream()
-                .map(s -> new SuiteExportDto(
-                        s.getId(),
+                .map(s -> new SuiteImportDto(
                         s.getName(),
                         safe(s.getDescription())
                 ))

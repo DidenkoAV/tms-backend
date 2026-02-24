@@ -18,7 +18,7 @@ public record TestCasesExportResponse(
         int total,
 
         @Schema(description = "List of suites in the project")
-        List<SuiteExportDto> suites,
+        List<SuiteImportDto> suites,
 
         @Schema(description = "List of exported test cases")
         List<TestCaseResponse> cases
