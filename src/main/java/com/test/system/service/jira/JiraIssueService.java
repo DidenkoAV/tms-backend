@@ -43,7 +43,6 @@ public class JiraIssueService {
     /**
      * Creates a new Jira issue and links it to a test case.
      */
-    @Transactional
     public TestCaseIssueResponse createJiraIssue(Long groupId, Long testCaseId, CreateIssueRequest req) {
         log.info("[JiraIssue] Create: groupId={}, tcId={}, summary={}", groupId, testCaseId, req.summary());
 
@@ -55,8 +54,7 @@ public class JiraIssueService {
 
         uploader.uploadIfPresent(conn, response.key(), req.attachments());
 
-        TestCaseIssue link = buildLink(testCase, conn, response.key());
-        TestCaseIssue saved = issueLinks.save(link);
+        TestCaseIssue saved = saveIssueLink(testCase, conn, response.key());
 
         log.info("[JiraIssue] Created: key={}, linkId={}", response.key(), saved.getId());
         return toDto(groupId, saved);
@@ -65,7 +63,6 @@ public class JiraIssueService {
     /**
      * Attaches existing Jira issue to a test case.
      */
-    @Transactional
     public TestCaseIssueResponse attachJiraIssue(Long groupId, Long testCaseId, String issueKey) {
         log.info("[JiraIssue] Attach: groupId={}, tcId={}, key={}", groupId, testCaseId, issueKey);
 
@@ -75,11 +72,20 @@ public class JiraIssueService {
         String normalizedKey = issueKey.trim().toUpperCase();
         verifyIssueExists(conn, normalizedKey);
 
-        TestCaseIssue link = buildLink(testCase, conn, normalizedKey);
-        TestCaseIssue saved = issueLinks.save(link);
+        TestCaseIssue saved = saveIssueLink(testCase, conn, normalizedKey);
 
         log.info("[JiraIssue] Attached: key={}, linkId={}", normalizedKey, saved.getId());
         return toDto(groupId, saved);
+    }
+
+    /**
+     * Saves issue link in a separate transaction to ensure it's committed
+     * even if subsequent operations (like fetching details from Jira) fail.
+     */
+    @Transactional
+    private TestCaseIssue saveIssueLink(TestCase testCase, JiraConnection conn, String issueKey) {
+        TestCaseIssue link = buildLink(testCase, conn, issueKey);
+        return issueLinks.save(link);
     }
 
     /**
