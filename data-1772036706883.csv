@@ -1,0 +1,190 @@
+"id","name_with_indent","name","parent_id","depth"
+475,"(!) Check PDF and duplicates via SQL","(!) Check PDF and duplicates via SQL",NULL,0
+471,"channel configuration","channel configuration",NULL,0
+455,"chrome","chrome",NULL,0
+470,"composition package","composition package",NULL,0
+467,"data element (data source)","data element (data source)",NULL,0
+469,"data files (data resources)","data files (data resources)",NULL,0
+474,"dataFiles(data resources)","dataFiles(data resources)",NULL,0
+479,"Expected result: negative","Expected result: negative",NULL,0
+478,"Expected result: positive","Expected result: positive",NULL,0
+477,"file_comparison","file_comparison",NULL,0
+456,"firefox","firefox",NULL,0
+465,"font style","font style",NULL,0
+461,"global smart text","global smart text",NULL,0
+473,"image library","image library",NULL,0
+463,"library image","library image",NULL,0
+460,"local images","local images",NULL,0
+459,"local smart text","local smart text",NULL,0
+457,"messages","messages",NULL,0
+476,"pdf_comparison","pdf_comparison",NULL,0
+481,"sefas","sefas",NULL,0
+480,"self_tests","self_tests",NULL,0
+472,"syncClone","syncClone",NULL,0
+458,"target group","target group",NULL,0
+462,"targeting rule","targeting rule",NULL,0
+293,"Test Cases","Test Cases",NULL,0
+464,"text style","text style",NULL,0
+466,"variables","variables",NULL,0
+468,"Variants","Variants",NULL,0
+433,"  output_comparison","output_comparison",293,1
+454,"  sefas","sefas",293,1
+453,"  self_tests","self_tests",293,1
+436,"  SOAP API chunking","SOAP API chunking",293,1
+294,"  ui","ui",293,1
+329,"    connected","connected",294,2
+398,"    emailSync","emailSync",294,2
+363,"    sync","sync",294,2
+295,"    umh","umh",294,2
+435,"    file_comparison","file_comparison",433,2
+434,"    pdf_comparison","pdf_comparison",433,2
+443,"    Chunking type: multiple","Chunking type: multiple",436,2
+449,"    Chunking type: Parallel single","Chunking type: Parallel single",436,2
+437,"    Chunking type: single","Chunking type: single",436,2
+296,"      chrome","chrome",295,3
+313,"      firefox","firefox",295,3
+330,"      chrome","chrome",329,3
+347,"      firefox","firefox",329,3
+397,"      (!) Check PDF and duplicates via SQL","(!) Check PDF and duplicates via SQL",363,3
+364,"      chrome","chrome",363,3
+381,"      firefox","firefox",363,3
+432,"      (!) Check PDF and duplicates via SQL","(!) Check PDF and duplicates via SQL",398,3
+399,"      chrome","chrome",398,3
+416,"      firefox","firefox",398,3
+441,"      System chunking: disabled","System chunking: disabled",437,3
+438,"      System chunking: enabled","System chunking: enabled",437,3
+447,"      System chunking: disabled","System chunking: disabled",443,3
+444,"      System chunking: enabled","System chunking: enabled",443,3
+450,"      System chunking: enabled","System chunking: enabled",449,3
+311,"        channel configuration","channel configuration",296,4
+310,"        composition package","composition package",296,4
+307,"        data element (data source)","data element (data source)",296,4
+309,"        data files (data resources)","data files (data resources)",296,4
+305,"        font style","font style",296,4
+301,"        global smart text","global smart text",296,4
+303,"        library image","library image",296,4
+300,"        local images","local images",296,4
+299,"        local smart text","local smart text",296,4
+297,"        messages","messages",296,4
+312,"        syncClone","syncClone",296,4
+298,"        target group","target group",296,4
+302,"        targeting rule","targeting rule",296,4
+304,"        text style","text style",296,4
+306,"        variables","variables",296,4
+308,"        Variants","Variants",296,4
+328,"        channel configuration","channel configuration",313,4
+327,"        composition package","composition package",313,4
+324,"        data element (Data source)","data element (Data source)",313,4
+326,"        dataFiles(data resources)","dataFiles(data resources)",313,4
+322,"        font style","font style",313,4
+318,"        global smart text","global smart text",313,4
+320,"        image library","image library",313,4
+314,"        local images","local images",313,4
+315,"        local smart text","local smart text",313,4
+316,"        messages","messages",313,4
+317,"        target group","target group",313,4
+319,"        targeting rule","targeting rule",313,4
+321,"        text style","text style",313,4
+323,"        variables","variables",313,4
+325,"        Variants","Variants",313,4
+345,"        channel configuration","channel configuration",330,4
+344,"        composition package","composition package",330,4
+341,"        data element (data source)","data element (data source)",330,4
+343,"        data files (data resources)","data files (data resources)",330,4
+339,"        font style","font style",330,4
+335,"        global smart text","global smart text",330,4
+337,"        library image","library image",330,4
+334,"        local images","local images",330,4
+333,"        local smart text","local smart text",330,4
+331,"        messages","messages",330,4
+346,"        syncClone","syncClone",330,4
+332,"        target group","target group",330,4
+336,"        targeting rule","targeting rule",330,4
+338,"        text style","text style",330,4
+340,"        variables","variables",330,4
+342,"        Variants","Variants",330,4
+362,"        channel configuration","channel configuration",347,4
+361,"        composition package","composition package",347,4
+358,"        data element (Data source)","data element (Data source)",347,4
+360,"        dataFiles(data resources)","dataFiles(data resources)",347,4
+356,"        font style","font style",347,4
+352,"        global smart text","global smart text",347,4
+354,"        image library","image library",347,4
+348,"        local images","local images",347,4
+349,"        local smart text","local smart text",347,4
+350,"        messages","messages",347,4
+351,"        target group","target group",347,4
+353,"        targeting rule","targeting rule",347,4
+355,"        text style","text style",347,4
+357,"        variables","variables",347,4
+359,"        Variants","Variants",347,4
+379,"        channel configuration","channel configuration",364,4
+378,"        composition package","composition package",364,4
+375,"        data element (data source)","data element (data source)",364,4
+377,"        data files (data resources)","data files (data resources)",364,4
+373,"        font style","font style",364,4
+369,"        global smart text","global smart text",364,4
+371,"        library image","library image",364,4
+368,"        local images","local images",364,4
+367,"        local smart text","local smart text",364,4
+365,"        messages","messages",364,4
+380,"        syncClone","syncClone",364,4
+366,"        target group","target group",364,4
+370,"        targeting rule","targeting rule",364,4
+372,"        text style","text style",364,4
+374,"        variables","variables",364,4
+376,"        Variants","Variants",364,4
+396,"        channel configuration","channel configuration",381,4
+395,"        composition package","composition package",381,4
+392,"        data element (Data source)","data element (Data source)",381,4
+394,"        dataFiles(data resources)","dataFiles(data resources)",381,4
+390,"        font style","font style",381,4
+386,"        global smart text","global smart text",381,4
+388,"        image library","image library",381,4
+382,"        local images","local images",381,4
+383,"        local smart text","local smart text",381,4
+384,"        messages","messages",381,4
+385,"        target group","target group",381,4
+387,"        targeting rule","targeting rule",381,4
+389,"        text style","text style",381,4
+391,"        variables","variables",381,4
+393,"        Variants","Variants",381,4
+414,"        channel configuration","channel configuration",399,4
+413,"        composition package","composition package",399,4
+410,"        data element (data source)","data element (data source)",399,4
+412,"        data files (data resources)","data files (data resources)",399,4
+408,"        font style","font style",399,4
+404,"        global smart text","global smart text",399,4
+406,"        library image","library image",399,4
+403,"        local images","local images",399,4
+402,"        local smart text","local smart text",399,4
+400,"        messages","messages",399,4
+415,"        syncClone","syncClone",399,4
+401,"        target group","target group",399,4
+405,"        targeting rule","targeting rule",399,4
+407,"        text style","text style",399,4
+409,"        variables","variables",399,4
+411,"        Variants","Variants",399,4
+431,"        channel configuration","channel configuration",416,4
+430,"        composition package","composition package",416,4
+427,"        data element (Data source)","data element (Data source)",416,4
+429,"        dataFiles(data resources)","dataFiles(data resources)",416,4
+425,"        font style","font style",416,4
+421,"        global smart text","global smart text",416,4
+423,"        image library","image library",416,4
+417,"        local images","local images",416,4
+418,"        local smart text","local smart text",416,4
+419,"        messages","messages",416,4
+420,"        target group","target group",416,4
+422,"        targeting rule","targeting rule",416,4
+424,"        text style","text style",416,4
+426,"        variables","variables",416,4
+428,"        Variants","Variants",416,4
+440,"        Expected result: negative","Expected result: negative",438,4
+439,"        Expected result: positive","Expected result: positive",438,4
+442,"        Expected result: positive","Expected result: positive",441,4
+446,"        Expected result: negative","Expected result: negative",444,4
+445,"        Expected result: positive","Expected result: positive",444,4
+448,"        Expected result: positive","Expected result: positive",447,4
+452,"        Expected result: negative","Expected result: negative",450,4
+451,"        Expected result: positive","Expected result: positive",450,4

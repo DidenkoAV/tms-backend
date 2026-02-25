@@ -62,6 +62,9 @@ public class TestCaseImportProcessor {
             return;
         }
 
+        log.info("{} ========== STARTING SUITE IMPORT ==========", LOG_PREFIX);
+        log.info("{} Total suites to import: {}", LOG_PREFIX, importedSuites.size());
+
         // Separate hierarchical and flat suites
         List<HierarchicalSuiteImportDto> hierarchicalSuites = new ArrayList<>();
         List<SuiteImportDto> flatSuites = new ArrayList<>();
@@ -69,10 +72,16 @@ public class TestCaseImportProcessor {
         for (SuiteImport suiteDto : importedSuites) {
             if (suiteDto instanceof HierarchicalSuiteImportDto h) {
                 hierarchicalSuites.add(h);
+                log.debug("{} Found hierarchical suite: name={}, parentName={}",
+                        LOG_PREFIX, h.name(), h.parentName());
             } else if (suiteDto instanceof SuiteImportDto s) {
                 flatSuites.add(s);
+                log.debug("{} Found flat suite: name={}", LOG_PREFIX, s.name());
             }
         }
+
+        log.info("{} Hierarchical suites: {}, Flat suites: {}",
+                LOG_PREFIX, hierarchicalSuites.size(), flatSuites.size());
 
         // Import hierarchical suites first (respecting parent-child relationships)
         importHierarchicalSuites(projectId, hierarchicalSuites, suiteByName);
@@ -106,31 +115,48 @@ public class TestCaseImportProcessor {
             List<HierarchicalSuiteImportDto> hierarchicalSuites,
             Map<String, Long> suiteByName
     ) {
+        log.info("{} ========== HIERARCHICAL SUITE IMPORT START ==========", LOG_PREFIX);
+        log.info("{} Total hierarchical suites to import: {}", LOG_PREFIX, hierarchicalSuites.size());
+
         // Build dependency graph
         Map<String, List<HierarchicalSuiteImportDto>> childrenByParent = new HashMap<>();
         List<HierarchicalSuiteImportDto> rootSuites = new ArrayList<>();
 
         for (HierarchicalSuiteImportDto suite : hierarchicalSuites) {
+            log.debug("{} Processing suite: name='{}', parentName='{}'",
+                    LOG_PREFIX, suite.name(), suite.parentName());
+
             if (suite.parentName() == null) {
                 rootSuites.add(suite);
+                log.debug("{} Added as ROOT suite: '{}'", LOG_PREFIX, suite.name());
             } else {
+                String parentKey = normalizeKey(suite.parentName());
                 childrenByParent
-                        .computeIfAbsent(normalizeKey(suite.parentName()), k -> new ArrayList<>())
+                        .computeIfAbsent(parentKey, k -> new ArrayList<>())
                         .add(suite);
+                log.debug("{} Added as CHILD of '{}' (key='{}'): '{}'",
+                        LOG_PREFIX, suite.parentName(), parentKey, suite.name());
             }
         }
 
+        log.info("{} Root suites: {}", LOG_PREFIX, rootSuites.size());
+        log.info("{} Parent keys in childrenByParent: {}", LOG_PREFIX, childrenByParent.keySet());
+
         // Process root suites first, then children recursively
         for (HierarchicalSuiteImportDto rootSuite : rootSuites) {
+            log.info("{} Processing root suite: '{}'", LOG_PREFIX, rootSuite.name());
             importHierarchicalSuiteRecursive(
                     projectId,
                     rootSuite,
                     null,
                     0,
+                    null,  // currentPath for root is null
                     childrenByParent,
                     suiteByName
             );
         }
+
+        log.info("{} ========== HIERARCHICAL SUITE IMPORT COMPLETE ==========", LOG_PREFIX);
     }
 
     /**
@@ -140,7 +166,8 @@ public class TestCaseImportProcessor {
      * @param suiteDto the suite to import
      * @param parentId the parent suite ID (null for root)
      * @param depth the nesting depth
-     * @param childrenByParent map of children by parent name
+     * @param currentPath the full path to current suite (null for root), e.g., "ui/sync"
+     * @param childrenByParent map of children by parent path
      * @param suiteByName map of suite names to IDs
      */
     private void importHierarchicalSuiteRecursive(
@@ -148,6 +175,7 @@ public class TestCaseImportProcessor {
             HierarchicalSuiteImportDto suiteDto,
             Long parentId,
             int depth,
+            String currentPath,
             Map<String, List<HierarchicalSuiteImportDto>> childrenByParent,
             Map<String, Long> suiteByName
     ) {
@@ -156,38 +184,78 @@ public class TestCaseImportProcessor {
             return;
         }
 
+        log.debug("{} [importHierarchicalSuiteRecursive] CALLED: name={}, parentId={}, depth={}",
+                LOG_PREFIX, suiteName, parentId, depth);
+
         // Check max depth
         if (depth > 4) {
             log.warn("{} Skipping suite {} - max depth (5) exceeded", LOG_PREFIX, suiteName);
             return;
         }
 
-        String key = normalizeKey(suiteName);
+        // Use full path as key to avoid conflicts between suites with same name but different parents
+        String fullKey = buildSuiteKey(parentId, suiteName, suiteByName);
+        String simpleKey = normalizeKey(suiteName);
         Long suiteId;
 
-        if (!suiteByName.containsKey(key)) {
+        if (!suiteByName.containsKey(fullKey)) {
+            log.debug("{} [importHierarchicalSuiteRecursive] Creating suite: name={}, parentId={}, depth={}",
+                    LOG_PREFIX, suiteName, parentId, depth);
             Suite suite = createSuite(projectId, parentId, depth, suiteName, suiteDto.description());
             suiteId = suite.getId();
-            suiteByName.put(key, suiteId);
+
+            // Store with full key (always unique)
+            suiteByName.put(fullKey, suiteId);
+
+            // Also store with simple key if not already taken
+            // This allows test cases to find suites by simple name when there's no ambiguity
+            if (!suiteByName.containsKey(simpleKey)) {
+                suiteByName.put(simpleKey, suiteId);
+                log.debug("{} Registered suite with simple key: {} -> {}", LOG_PREFIX, simpleKey, suiteId);
+            } else {
+                log.debug("{} Simple key {} already taken, only using full key {}",
+                        LOG_PREFIX, simpleKey, fullKey);
+            }
+
             log.debug("{} Created hierarchical suite: {} (id={}, parent={}, depth={})",
                     LOG_PREFIX, suiteName, suiteId, parentId, depth);
         } else {
-            suiteId = suiteByName.get(key);
+            suiteId = suiteByName.get(fullKey);
+            log.debug("{} [importHierarchicalSuiteRecursive] Suite already exists: name={}, id={}",
+                    LOG_PREFIX, suiteName, suiteId);
         }
 
-        // Process children
-        List<HierarchicalSuiteImportDto> children = childrenByParent.get(key);
+        // Build full path for current suite
+        String fullPath = currentPath != null
+                ? currentPath + "/" + suiteName
+                : suiteName;
+
+        log.debug("{} Current suite full path: '{}'", LOG_PREFIX, fullPath);
+
+        // Process children - use full path for lookup to distinguish between suites with same name
+        // For example: children of "ui/sync/chrome" vs children of "ui/umh/chrome"
+        String lookupKey = normalizeKey(fullPath);
+        List<HierarchicalSuiteImportDto> children = childrenByParent.get(lookupKey);
+
+        log.debug("{} Looking for children of '{}' using key '{}': found {} children",
+                LOG_PREFIX, fullPath, lookupKey, children != null ? children.size() : 0);
+
         if (children != null) {
+            log.info("{} Processing {} children of suite '{}'", LOG_PREFIX, children.size(), fullPath);
             for (HierarchicalSuiteImportDto child : children) {
+                log.debug("{} Processing child: '{}' of parent '{}'", LOG_PREFIX, child.name(), fullPath);
                 importHierarchicalSuiteRecursive(
                         projectId,
                         child,
                         suiteId,
                         depth + 1,
+                        fullPath,  // Pass full path to children
                         childrenByParent,
                         suiteByName
                 );
             }
+        } else {
+            log.debug("{} No children found for suite '{}'", LOG_PREFIX, fullPath);
         }
     }
 
@@ -366,6 +434,9 @@ public class TestCaseImportProcessor {
        ============================================================ */
 
     private Suite createSuite(Long projectId, Long parentId, Integer depth, String name, String description) {
+        log.debug("{} [createSuite] BEFORE BUILD: name={}, parentId={}, depth={}",
+                LOG_PREFIX, name, parentId, depth);
+
         Suite suite = Suite.builder()
                 .projectId(projectId)
                 .parentId(parentId)
@@ -374,7 +445,16 @@ public class TestCaseImportProcessor {
                 .description(isNotBlank(description) ? description : DEFAULT_SUITE_DESC)
                 .archived(false)
                 .build();
-        return suiteRepository.save(suite);
+
+        log.debug("{} [createSuite] AFTER BUILD: id={}, name={}, parentId={}, depth={}",
+                LOG_PREFIX, suite.getId(), suite.getName(), suite.getParentId(), suite.getDepth());
+
+        Suite saved = suiteRepository.save(suite);
+
+        log.debug("{} [createSuite] AFTER SAVE: id={}, name={}, parentId={}, depth={}",
+                LOG_PREFIX, saved.getId(), saved.getName(), saved.getParentId(), saved.getDepth());
+
+        return saved;
     }
 
     private Long resolvePriorityId(TestCaseResponse dto, Map<String, Long> priorityByName) {
@@ -399,6 +479,22 @@ public class TestCaseImportProcessor {
         }
 
         return typeId;
+    }
+
+    /**
+     * Build a unique key for a suite based on its parent and name.
+     * This prevents collisions when multiple suites have the same name but different parents.
+     *
+     * @param parentId the parent suite ID (null for root suites)
+     * @param suiteName the suite name
+     * @param suiteByName the map of existing suite keys to IDs (not used currently but kept for future extensions)
+     * @return a unique key for the suite
+     */
+    private String buildSuiteKey(Long parentId, String suiteName, Map<String, Long> suiteByName) {
+        if (parentId == null) {
+            return normalizeKey(suiteName);
+        }
+        return parentId + "/" + normalizeKey(suiteName);
     }
 }
 

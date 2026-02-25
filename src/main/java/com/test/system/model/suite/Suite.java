@@ -25,8 +25,7 @@ public class Suite {
     private Long parentId;
 
     @Column(name = "depth", nullable = false)
-    @Builder.Default
-    private Integer depth = 0;
+    private Integer depth;
 
     @Column(nullable = false, length = 255)
     private String name;
