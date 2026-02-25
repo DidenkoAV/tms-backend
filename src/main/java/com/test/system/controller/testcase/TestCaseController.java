@@ -8,6 +8,7 @@ import com.test.system.dto.testcase.response.ImportTestCasesResponse;
 import com.test.system.dto.testcase.response.TestCaseResponse;
 import com.test.system.service.testcase.TestCaseImportExportService;
 import com.test.system.service.testcase.TestCaseService;
+import com.test.system.service.testcase.TestRailImportService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -15,6 +16,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Map;
@@ -28,6 +30,7 @@ public class TestCaseController {
 
     private final TestCaseService testCaseService;
     private final TestCaseImportExportService importExportService;
+    private final TestRailImportService testRailImportService;
 
     @Operation(summary = "Create test case", description = "Create a new test case in the project.")
     @PostMapping("/projects/{projectId}/cases")
@@ -84,5 +87,15 @@ public class TestCaseController {
                                                @Valid @RequestBody TestCasesImportRequest request,
                                                @RequestParam(name = "overwriteExisting", defaultValue = "false") boolean overwriteExisting) {
         return importExportService.importTestCases(projectId, request, overwriteExisting);
+    }
+
+    @Operation(summary = "Import from TestRail XML", description = "Import test cases from TestRail XML export file.")
+    @PostMapping("/projects/{projectId}/cases/import/testrail")
+    public ImportTestCasesResponse importFromTestRail(
+            @PathVariable Long projectId,
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(name = "overwriteExisting", defaultValue = "false") boolean overwriteExisting
+    ) {
+        return testRailImportService.importFromTestRail(projectId, file, overwriteExisting);
     }
 }
