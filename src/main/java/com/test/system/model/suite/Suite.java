@@ -21,6 +21,13 @@ public class Suite {
     @Column(name = "project_id", nullable = false)
     private Long projectId;
 
+    @Column(name = "parent_id")
+    private Long parentId;
+
+    @Column(name = "depth", nullable = false)
+    @Builder.Default
+    private Integer depth = 0;
+
     @Column(nullable = false, length = 255)
     private String name;
 

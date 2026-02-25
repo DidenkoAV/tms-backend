@@ -96,5 +96,14 @@ public interface TestCaseRepository extends JpaRepository<TestCase, Long> {
      */
     @Query("SELECT tc FROM TestCase tc WHERE tc.projectId IN :projectIds AND tc.archived = false")
     List<TestCase> findByProjectIdIn(@Param("projectIds") List<Long> projectIds);
+
+    /**
+     * Finds all non-archived test cases for multiple suites.
+     *
+     * @param suiteIds list of suite IDs
+     * @return List of non-archived test cases from all specified suites
+     */
+    @Query("SELECT tc FROM TestCase tc WHERE tc.suiteId IN :suiteIds AND tc.archived = false")
+    List<TestCase> findAllActiveBySuiteIdIn(@Param("suiteIds") List<Long> suiteIds);
 }
 

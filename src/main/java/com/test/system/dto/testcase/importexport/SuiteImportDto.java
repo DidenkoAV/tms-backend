@@ -9,5 +9,5 @@ public record SuiteImportDto(
 
         @Schema(description = "Suite description", example = "Critical smoke tests")
         String description
-) {}
+) implements SuiteImport {}
 

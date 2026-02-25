@@ -1,8 +1,10 @@
 package com.test.system.component.testcase.importing;
 
 import com.test.system.component.testcase.mapper.TestCaseMapper;
+import com.test.system.dto.testcase.importexport.HierarchicalSuiteImportDto;
 import com.test.system.dto.testcase.importexport.ImportContext;
 import com.test.system.dto.testcase.importexport.ImportStats;
+import com.test.system.dto.testcase.importexport.SuiteImport;
 import com.test.system.dto.testcase.importexport.SuiteImportDto;
 import com.test.system.dto.testcase.request.CreateTestCaseRequest;
 import com.test.system.dto.testcase.response.TestCaseResponse;
@@ -45,6 +47,7 @@ public class TestCaseImportProcessor {
     /**
      * Import suites into the project.
      * Creates suites that don't exist yet.
+     * Supports both flat and hierarchical suite structures.
      *
      * @param projectId the project ID
      * @param importedSuites the list of suites to import
@@ -52,14 +55,30 @@ public class TestCaseImportProcessor {
      */
     public void importSuites(
             Long projectId,
-            List<SuiteImportDto> importedSuites,
+            List<SuiteImport> importedSuites,
             Map<String, Long> suiteByName
     ) {
         if (importedSuites == null || importedSuites.isEmpty()) {
             return;
         }
 
-        for (SuiteImportDto suiteDto : importedSuites) {
+        // Separate hierarchical and flat suites
+        List<HierarchicalSuiteImportDto> hierarchicalSuites = new ArrayList<>();
+        List<SuiteImportDto> flatSuites = new ArrayList<>();
+
+        for (SuiteImport suiteDto : importedSuites) {
+            if (suiteDto instanceof HierarchicalSuiteImportDto h) {
+                hierarchicalSuites.add(h);
+            } else if (suiteDto instanceof SuiteImportDto s) {
+                flatSuites.add(s);
+            }
+        }
+
+        // Import hierarchical suites first (respecting parent-child relationships)
+        importHierarchicalSuites(projectId, hierarchicalSuites, suiteByName);
+
+        // Import flat suites
+        for (SuiteImportDto suiteDto : flatSuites) {
             String suiteName = trimToEmpty(suiteDto.name());
 
             if (isBlank(suiteName)) {
@@ -68,9 +87,106 @@ public class TestCaseImportProcessor {
 
             String key = normalizeKey(suiteName);
             if (!suiteByName.containsKey(key)) {
-                Suite suite = createSuite(projectId, suiteName, suiteDto.description());
+                Suite suite = createSuite(projectId, null, 0, suiteName, suiteDto.description());
                 suiteByName.put(key, suite.getId());
-                log.debug("{} Created suite: {} (id={})", LOG_PREFIX, suiteName, suite.getId());
+                log.debug("{} Created flat suite: {} (id={})", LOG_PREFIX, suiteName, suite.getId());
+            }
+        }
+    }
+
+    /**
+     * Import hierarchical suites, creating parents before children.
+     *
+     * @param projectId the project ID
+     * @param hierarchicalSuites the list of hierarchical suites
+     * @param suiteByName the map of suite names to IDs
+     */
+    private void importHierarchicalSuites(
+            Long projectId,
+            List<HierarchicalSuiteImportDto> hierarchicalSuites,
+            Map<String, Long> suiteByName
+    ) {
+        // Build dependency graph
+        Map<String, List<HierarchicalSuiteImportDto>> childrenByParent = new HashMap<>();
+        List<HierarchicalSuiteImportDto> rootSuites = new ArrayList<>();
+
+        for (HierarchicalSuiteImportDto suite : hierarchicalSuites) {
+            if (suite.parentName() == null) {
+                rootSuites.add(suite);
+            } else {
+                childrenByParent
+                        .computeIfAbsent(normalizeKey(suite.parentName()), k -> new ArrayList<>())
+                        .add(suite);
+            }
+        }
+
+        // Process root suites first, then children recursively
+        for (HierarchicalSuiteImportDto rootSuite : rootSuites) {
+            importHierarchicalSuiteRecursive(
+                    projectId,
+                    rootSuite,
+                    null,
+                    0,
+                    childrenByParent,
+                    suiteByName
+            );
+        }
+    }
+
+    /**
+     * Recursively import a suite and its children.
+     *
+     * @param projectId the project ID
+     * @param suiteDto the suite to import
+     * @param parentId the parent suite ID (null for root)
+     * @param depth the nesting depth
+     * @param childrenByParent map of children by parent name
+     * @param suiteByName map of suite names to IDs
+     */
+    private void importHierarchicalSuiteRecursive(
+            Long projectId,
+            HierarchicalSuiteImportDto suiteDto,
+            Long parentId,
+            int depth,
+            Map<String, List<HierarchicalSuiteImportDto>> childrenByParent,
+            Map<String, Long> suiteByName
+    ) {
+        String suiteName = trimToEmpty(suiteDto.name());
+        if (isBlank(suiteName)) {
+            return;
+        }
+
+        // Check max depth
+        if (depth > 4) {
+            log.warn("{} Skipping suite {} - max depth (5) exceeded", LOG_PREFIX, suiteName);
+            return;
+        }
+
+        String key = normalizeKey(suiteName);
+        Long suiteId;
+
+        if (!suiteByName.containsKey(key)) {
+            Suite suite = createSuite(projectId, parentId, depth, suiteName, suiteDto.description());
+            suiteId = suite.getId();
+            suiteByName.put(key, suiteId);
+            log.debug("{} Created hierarchical suite: {} (id={}, parent={}, depth={})",
+                    LOG_PREFIX, suiteName, suiteId, parentId, depth);
+        } else {
+            suiteId = suiteByName.get(key);
+        }
+
+        // Process children
+        List<HierarchicalSuiteImportDto> children = childrenByParent.get(key);
+        if (children != null) {
+            for (HierarchicalSuiteImportDto child : children) {
+                importHierarchicalSuiteRecursive(
+                        projectId,
+                        child,
+                        suiteId,
+                        depth + 1,
+                        childrenByParent,
+                        suiteByName
+                );
             }
         }
     }
@@ -178,8 +294,8 @@ public class TestCaseImportProcessor {
             return suiteId;
         }
 
-        // Create new suite
-        Suite newSuite = createSuite(projectId, suiteName, DEFAULT_SUITE_DESC);
+        // Create new suite (flat, at root level)
+        Suite newSuite = createSuite(projectId, null, 0, suiteName, DEFAULT_SUITE_DESC);
         suiteByName.put(key, newSuite.getId());
         log.debug("{} Created suite on-the-fly: {} (id={})", LOG_PREFIX, suiteName, newSuite.getId());
 
@@ -249,9 +365,11 @@ public class TestCaseImportProcessor {
        Helper methods
        ============================================================ */
 
-    private Suite createSuite(Long projectId, String name, String description) {
+    private Suite createSuite(Long projectId, Long parentId, Integer depth, String name, String description) {
         Suite suite = Suite.builder()
                 .projectId(projectId)
+                .parentId(parentId)
+                .depth(depth)
                 .name(name)
                 .description(isNotBlank(description) ? description : DEFAULT_SUITE_DESC)
                 .archived(false)

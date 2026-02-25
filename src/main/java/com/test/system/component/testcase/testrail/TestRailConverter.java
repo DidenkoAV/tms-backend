@@ -1,7 +1,8 @@
 package com.test.system.component.testcase.testrail;
 
 import com.test.system.dto.testcase.common.TestCaseStep;
-import com.test.system.dto.testcase.importexport.SuiteImportDto;
+import com.test.system.dto.testcase.importexport.HierarchicalSuiteImportDto;
+import com.test.system.dto.testcase.importexport.SuiteImport;
 import com.test.system.dto.testcase.importexport.TestCasesImportRequest;
 import com.test.system.dto.testcase.response.TestCaseResponse;
 import com.test.system.dto.testcase.testrail.*;
@@ -40,13 +41,13 @@ public class TestRailConverter {
     public TestCasesImportRequest convert(TestRailSuiteXml suiteXml, Long projectId) {
         log.info("{} Converting TestRail suite: {}", LOG_PREFIX, suiteXml.getName());
 
-        List<SuiteImportDto> suites = new ArrayList<>();
+        List<SuiteImport> suites = new ArrayList<>();
         List<TestCaseResponse> cases = new ArrayList<>();
 
         // Process all sections recursively
         if (suiteXml.getSections() != null) {
             for (TestRailSectionXml section : suiteXml.getSections()) {
-                processSection(section, "", suites, cases, projectId);
+                processSection(section, null, suites, cases, projectId);
             }
         }
 
@@ -56,18 +57,18 @@ public class TestRailConverter {
     }
 
     /**
-     * Process a section recursively, building suite path and extracting test cases.
+     * Process a section recursively, creating hierarchical suites and extracting test cases.
      *
      * @param section the section to process
-     * @param parentPath the parent section path
+     * @param parentName the parent section name (null for root)
      * @param suites the list to collect suites
      * @param cases the list to collect test cases
      * @param projectId the project ID
      */
     private void processSection(
             TestRailSectionXml section,
-            String parentPath,
-            List<SuiteImportDto> suites,
+            String parentName,
+            List<SuiteImport> suites,
             List<TestCaseResponse> cases,
             Long projectId
     ) {
@@ -76,17 +77,27 @@ public class TestRailConverter {
             return;
         }
 
-        // Build full path: parent/child
-        String fullPath = isBlank(parentPath) ? sectionName : parentPath + " / " + sectionName;
-
-        // Add suite if not already added
+        // Add suite with parent relationship
         boolean suiteExists = suites.stream()
-                .anyMatch(s -> s.name().equalsIgnoreCase(fullPath));
+                .anyMatch(s -> {
+                    if (s instanceof HierarchicalSuiteImportDto h) {
+                        return h.name().equalsIgnoreCase(sectionName) &&
+                               Objects.equals(h.parentName(), parentName);
+                    }
+                    return false;
+                });
 
         if (!suiteExists) {
-            suites.add(new SuiteImportDto(fullPath, trimToEmpty(section.getDescription())));
-            log.debug("{} Added suite: {}", LOG_PREFIX, fullPath);
+            suites.add(new HierarchicalSuiteImportDto(
+                    sectionName,
+                    trimToEmpty(section.getDescription()),
+                    parentName
+            ));
+            log.debug("{} Added suite: {} (parent: {})", LOG_PREFIX, sectionName, parentName);
         }
+
+        // Build full path for test case suite name
+        String fullPath = isBlank(parentName) ? sectionName : parentName + " / " + sectionName;
 
         // Process test cases in this section
         if (section.getCases() != null) {
@@ -101,7 +112,7 @@ public class TestRailConverter {
         // Process nested sections recursively
         if (section.getSections() != null) {
             for (TestRailSectionXml subsection : section.getSections()) {
-                processSection(subsection, fullPath, suites, cases, projectId);
+                processSection(subsection, sectionName, suites, cases, projectId);
             }
         }
     }

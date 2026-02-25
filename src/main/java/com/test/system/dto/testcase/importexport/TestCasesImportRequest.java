@@ -12,7 +12,7 @@ public record TestCasesImportRequest(
         Long projectId,
 
         @Schema(description = "List of suites to import/create")
-        List<SuiteImportDto> suites,
+        List<SuiteImport> suites,
 
         @Schema(description = "List of test cases to import")
         @NotNull
