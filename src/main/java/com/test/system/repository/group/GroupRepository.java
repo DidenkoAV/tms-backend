@@ -1,5 +1,6 @@
 package com.test.system.repository.group;
 
+import com.test.system.enums.groups.GroupType;
 import com.test.system.model.group.Group;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -17,9 +18,9 @@ import java.util.Optional;
  *
  * <p><b>Group types:</b>
  * <ul>
- *   <li><b>Personal group</b> - Automatically created for each user, marked with {@code personal=true}.
+ *   <li><b>Personal group</b> - Automatically created for each user, marked with {@code groupType=PERSONAL}.
  *       There should be exactly one personal group per user. Cannot be deleted.</li>
- *   <li><b>Team group</b> - Created manually by users for collaboration, marked with {@code personal=false}.
+ *   <li><b>Shared group</b> - Created manually by users for collaboration, marked with {@code groupType=SHARED}.
  *       Can be deleted by the owner.</li>
  * </ul>
  *
@@ -41,7 +42,7 @@ public interface GroupRepository extends JpaRepository<Group, Long> {
      * @return the personal group if found, empty otherwise
      * @see com.test.system.service.authorization.UserService#ensurePersonalGroup(com.test.system.model.user.User)
      */
-    @Query("SELECT g FROM Group g WHERE g.owner.id = :ownerId AND g.personal = true")
+    @Query("SELECT g FROM Group g WHERE g.owner.id = :ownerId AND g.groupType = 'PERSONAL'")
     Optional<Group> findPersonalGroup(@Param("ownerId") Long ownerId);
 
     /**

@@ -44,7 +44,7 @@ public class GroupMapper {
         return new GroupSummaryResponse(
                 group.getId(),
                 group.getName(),
-                group.isPersonal(),
+                group.getGroupType(),
                 group.getOwner().getId(),
                 group.getOwner().getEmail(),
                 membersCount
@@ -62,7 +62,7 @@ public class GroupMapper {
         return new GroupDetailsResponse(
                 group.getId(),
                 group.getName(),
-                group.isPersonal(),
+                group.getGroupType(),
                 group.getOwner().getId(),
                 group.getOwner().getEmail(),
                 members

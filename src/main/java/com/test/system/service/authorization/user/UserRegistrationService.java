@@ -3,6 +3,7 @@ package com.test.system.service.authorization.user;
 import com.test.system.enums.auth.RoleName;
 import com.test.system.enums.auth.TokenType;
 import com.test.system.enums.groups.GroupRole;
+import com.test.system.enums.groups.GroupType;
 import com.test.system.enums.groups.MembershipStatus;
 import com.test.system.model.group.Group;
 import com.test.system.model.group.GroupMembership;
@@ -179,7 +180,7 @@ public class UserRegistrationService {
         Group group = Group.builder()
                 .name(name)
                 .owner(user)
-                .personal(true)
+                .groupType(GroupType.PERSONAL)
                 .build();
 
         try {

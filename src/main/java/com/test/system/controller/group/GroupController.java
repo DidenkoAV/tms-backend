@@ -4,6 +4,7 @@ import com.test.system.dto.group.info.GroupDetailsResponse;
 import com.test.system.dto.group.info.GroupSummaryResponse;
 import com.test.system.dto.group.invitation.AcceptInvitationRequest;
 import com.test.system.dto.group.invitation.InviteMemberRequest;
+import com.test.system.dto.group.management.CreateGroupRequest;
 import com.test.system.dto.group.management.RenameGroupRequest;
 import com.test.system.dto.group.member.ChangeMemberRoleRequest;
 import com.test.system.dto.group.member.GroupMemberResponse;
@@ -13,7 +14,9 @@ import com.test.system.service.group.GroupManagementService;
 import com.test.system.service.group.GroupMemberService;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
@@ -40,6 +43,18 @@ public class GroupController {
     @GetMapping("/my")
     public List<GroupSummaryResponse> getMyGroups(@AuthenticationPrincipal UserDetails principal) {
         return groupManagementService.myGroups(requireEmail(principal));
+    }
+
+    /**
+     * Create a new group.
+     * The current user will be set as the owner of the group.
+     * A non-personal group is created.
+     */
+    @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
+    public GroupDetailsResponse createGroup(@Valid @RequestBody CreateGroupRequest request,
+                                             @AuthenticationPrincipal UserDetails principal) {
+        return groupManagementService.createGroup(request.name(), requireEmail(principal));
     }
 
     /**

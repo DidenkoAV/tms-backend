@@ -1,5 +1,6 @@
 package com.test.system.model.group;
 
+import com.test.system.enums.groups.GroupType;
 import com.test.system.model.user.User;
 import jakarta.persistence.*;
 import lombok.*;
@@ -44,11 +45,12 @@ public class Group {
     private User owner;
 
     /**
-     * Whether this is a "personal" group created automatically for a user.
+     * Type of group: PERSONAL (auto-created, cannot be deleted) or SHARED (user-created, can be deleted).
      */
     @Builder.Default
-    @Column(nullable = false)
-    private boolean personal = true;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "group_type", nullable = false, length = 20)
+    private GroupType groupType = GroupType.PERSONAL;
 
     /**
      * Creation timestamp (UTC).
@@ -62,5 +64,19 @@ public class Group {
      */
     @Column(nullable = true)
     private Instant updatedAt;
+
+    /**
+     * Helper method to check if this is a personal group.
+     */
+    public boolean isPersonal() {
+        return groupType == GroupType.PERSONAL;
+    }
+
+    /**
+     * Helper method to check if this is a shared group.
+     */
+    public boolean isShared() {
+        return groupType == GroupType.SHARED;
+    }
 }
 

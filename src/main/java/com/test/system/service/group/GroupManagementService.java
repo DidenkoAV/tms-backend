@@ -8,6 +8,7 @@ import com.test.system.dto.group.member.GroupMemberResponse;
 import com.test.system.enums.auth.TokenType;
 import com.test.system.enums.groups.GroupError;
 import com.test.system.enums.groups.GroupRole;
+import com.test.system.enums.groups.GroupType;
 import com.test.system.enums.groups.MembershipStatus;
 import com.test.system.model.group.Group;
 import com.test.system.model.group.GroupMembership;
@@ -100,6 +101,61 @@ public class GroupManagementService {
     }
 
     /* ===================== Group Operations ===================== */
+
+    /**
+     * Creates a new group with the current user as owner.
+     * The group is created as non-personal and the creator is automatically added as OWNER.
+     *
+     * @param nameRaw group name
+     * @param requesterEmailRaw creator's email
+     * @return created group details
+     */
+    @Transactional
+    public GroupDetailsResponse createGroup(String nameRaw, String requesterEmailRaw) {
+        String requesterEmail = normEmail(requesterEmailRaw);
+        log.info("{} create group: name='{}', creator={}", LOG_PREFIX, nameRaw, requesterEmail);
+
+        User creator = accessControl.requireUser(requesterEmail);
+
+        // Validate name
+        String name = nameRaw == null ? "" : nameRaw.trim();
+        if (name.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, GroupError.NAME_REQUIRED.name());
+        }
+        if (name.length() < 3) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, GroupError.NAME_TOO_SHORT.name());
+        }
+        if (name.length() > 200) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Group name too long");
+        }
+
+        // Create group
+        Group group = Group.builder()
+                .name(name)
+                .owner(creator)
+                .groupType(GroupType.SHARED)
+                .createdAt(Instant.now())
+                .build();
+
+        Group savedGroup = groups.save(group);
+
+        // Create OWNER membership
+        GroupMembership ownerMembership = GroupMembership.builder()
+                .group(savedGroup)
+                .user(creator)
+                .role(GroupRole.OWNER)
+                .status(MembershipStatus.ACTIVE)
+                .createdAt(Instant.now())
+                .build();
+
+        memberships.save(ownerMembership);
+
+        log.info("{} group created: groupId={}, name='{}', owner={}",
+                LOG_PREFIX, savedGroup.getId(), savedGroup.getName(), creator.getEmail());
+
+        // Return group details
+        return getGroupDetails(savedGroup.getId(), requesterEmail);
+    }
 
     /**
      * Updates the name of a group.
