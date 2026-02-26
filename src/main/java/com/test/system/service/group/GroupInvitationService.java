@@ -3,6 +3,7 @@ package com.test.system.service.group;
 import com.test.system.component.group.GroupAccessControl;
 import com.test.system.component.group.GroupMapper;
 import com.test.system.dto.group.member.GroupMemberResponse;
+import com.test.system.enums.auth.RoleName;
 import com.test.system.enums.auth.TokenType;
 import com.test.system.enums.groups.GroupError;
 import com.test.system.enums.groups.GroupRole;
@@ -10,16 +11,22 @@ import com.test.system.enums.groups.MembershipStatus;
 import com.test.system.model.group.Group;
 import com.test.system.model.group.GroupMembership;
 import com.test.system.model.user.User;
+import com.test.system.model.user.UserRole;
+import com.test.system.repository.auth.UserRoleRepository;
 import com.test.system.repository.group.GroupMembershipRepository;
+import com.test.system.repository.user.UserRepository;
 import com.test.system.service.authorization.core.EmailTokenService;
 import com.test.system.service.mail.MailService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+
+import java.util.UUID;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -46,6 +53,9 @@ public class GroupInvitationService {
     private final EmailTokenService tokens;
     private final MailService mail;
     private final GroupMapper mapper;
+    private final UserRepository users;
+    private final UserRoleRepository roles;
+    private final PasswordEncoder encoder;
 
     @Value("${app.groups.max-members:3}")
     private int maxMembers;
@@ -73,7 +83,10 @@ public class GroupInvitationService {
 
         Group group = accessControl.requireGroup(groupId);
         User inviter = accessControl.requireUser(inviterEmail);
-        User invitee = accessControl.requireUser(inviteeEmail);
+
+        // Find or create invitee user
+        User invitee = users.findByEmail(inviteeEmail)
+                .orElseGet(() -> createPlaceholderUser(inviteeEmail));
 
         accessControl.requireOwnerActiveMember(groupId, inviter.getId());
 
@@ -268,5 +281,32 @@ public class GroupInvitationService {
         // Same pattern as database constraint: ^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$
         String emailPattern = "^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$";
         return email.matches(emailPattern);
+    }
+
+    /**
+     * Creates a placeholder user for invitations.
+     * The user is created with a random password and disabled status.
+     * They will need to complete registration when accepting the invitation.
+     */
+    private User createPlaceholderUser(String email) {
+        var roleUser = roles.findByName(RoleName.ROLE_USER)
+                .orElseThrow(() -> new IllegalStateException("ROLE_USER missing"));
+
+        // Generate random password - user will set their own during registration
+        String randomPassword = UUID.randomUUID().toString();
+
+        User user = User.builder()
+                .email(email)
+                .password(encoder.encode(randomPassword))
+                .fullName(email.split("@")[0]) // Use email prefix as temporary name
+                .enabled(false) // Disabled until they complete registration
+                .role(RoleName.ROLE_USER)
+                .build();
+        user.getRoles().add(roleUser);
+
+        User saved = users.save(user);
+        log.info("{} created placeholder user: userId={}, email={}", LOG_PREFIX, saved.getId(), saved.getEmail());
+
+        return saved;
     }
 }
