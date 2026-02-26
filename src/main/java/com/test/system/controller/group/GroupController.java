@@ -33,80 +33,139 @@ public class GroupController {
 
     /* ===================== Queries ===================== */
 
+    /**
+     * Get all groups where current user is a member.
+     * Returns list of groups with basic information (id, name, role, member count).
+     */
     @GetMapping("/my")
-    public List<GroupSummaryResponse> myGroups(@AuthenticationPrincipal UserDetails principal) {
+    public List<GroupSummaryResponse> getMyGroups(@AuthenticationPrincipal UserDetails principal) {
         return groupManagementService.myGroups(requireEmail(principal));
     }
 
-    @GetMapping("/{id}")
-    public GroupDetailsResponse group(@PathVariable Long id, @AuthenticationPrincipal UserDetails principal) {
-        return groupManagementService.getGroupDetails(id, requireEmail(principal));
+    /**
+     * Get detailed information about a specific group.
+     * Returns group details including name, description, member count, and user's role.
+     */
+    @GetMapping("/{groupId}")
+    public GroupDetailsResponse getGroupById(@PathVariable Long groupId, @AuthenticationPrincipal UserDetails principal) {
+        return groupManagementService.getGroupDetails(groupId, requireEmail(principal));
+    }
+
+    /**
+     * Get list of all members in a group.
+     * Returns list of users with their roles (OWNER, ADMIN, MEMBER).
+     */
+    @GetMapping("/{groupId}/members")
+    public List<GroupMemberResponse> getGroupMembers(@PathVariable Long groupId,
+                                                      @AuthenticationPrincipal UserDetails principal) {
+        return memberService.getGroupMembers(groupId, requireEmail(principal));
     }
 
     /* ===================== Group management ===================== */
 
-    @PatchMapping("/{id}")
-    public GroupDetailsResponse renameGroup(@PathVariable Long id,
+    /**
+     * Rename a group.
+     * Only OWNER or ADMIN can rename the group.
+     */
+    @PatchMapping("/{groupId}")
+    public GroupDetailsResponse renameGroup(@PathVariable Long groupId,
                                        @RequestBody RenameGroupRequest rq,
                                        @AuthenticationPrincipal UserDetails principal) {
         String email = requireEmail(principal);
-        groupManagementService.updateGroupName(id, rq.name(), email);
-        return groupManagementService.getGroupDetails(id, email);
+        groupManagementService.updateGroupName(groupId, rq.name(), email);
+        return groupManagementService.getGroupDetails(groupId, email);
     }
 
-    @DeleteMapping("/{id}")
-    public void deleteGroup(@PathVariable Long id, @AuthenticationPrincipal UserDetails principal) {
-        groupManagementService.deleteGroup(id, requireEmail(principal));
+    /**
+     * Delete a group permanently.
+     * Only OWNER can delete the group.
+     */
+    @DeleteMapping("/{groupId}")
+    public void deleteGroup(@PathVariable Long groupId, @AuthenticationPrincipal UserDetails principal) {
+        groupManagementService.deleteGroup(groupId, requireEmail(principal));
     }
 
-    @PostMapping("/{id}/leave")
-    public void leaveGroup(@PathVariable Long id, @AuthenticationPrincipal UserDetails principal) {
-        groupManagementService.leaveGroup(id, requireEmail(principal));
+    /**
+     * Leave a group.
+     * Current user will be removed from the group.
+     * OWNER cannot leave - must transfer ownership or delete group first.
+     */
+    @PostMapping("/{groupId}/leave")
+    public void leaveGroup(@PathVariable Long groupId, @AuthenticationPrincipal UserDetails principal) {
+        groupManagementService.leaveGroup(groupId, requireEmail(principal));
     }
 
     /* ===================== Invitations ===================== */
 
-    @PostMapping("/{id}/members")
-    public void invite(@PathVariable Long id,
-                       @RequestBody InviteMemberRequest rq,
-                       @AuthenticationPrincipal UserDetails principal) {
-        invitationService.inviteUserToGroup(id, requireEmail(principal), rq.email());
+    /**
+     * Invite a user to the group by email.
+     * Only OWNER or ADMIN can invite new members.
+     * An invitation email will be sent to the user.
+     */
+    @PostMapping("/{groupId}/invites")
+    public void inviteUserToGroup(@PathVariable Long groupId,
+                                   @RequestBody InviteMemberRequest rq,
+                                   @AuthenticationPrincipal UserDetails principal) {
+        invitationService.inviteUserToGroup(groupId, requireEmail(principal), rq.email());
     }
 
-    @GetMapping("/{id}/invites/pending")
-    public List<GroupMemberResponse> pending(@PathVariable Long id,
-                                        @AuthenticationPrincipal UserDetails principal) {
-        return invitationService.getPendingInvitationsAsDto(id, requireEmail(principal));
+    /**
+     * Get list of pending invitations for a group.
+     * Returns users who were invited but haven't accepted yet.
+     * Only OWNER or ADMIN can view pending invitations.
+     */
+    @GetMapping("/{groupId}/invites/pending")
+    public List<GroupMemberResponse> getPendingInvitations(@PathVariable Long groupId,
+                                                            @AuthenticationPrincipal UserDetails principal) {
+        return invitationService.getPendingInvitationsAsDto(groupId, requireEmail(principal));
     }
 
-    @DeleteMapping("/{id}/invites/{memberId}")
-    public void cancelInvite(@PathVariable Long id,
-                             @PathVariable Long memberId,
-                             @AuthenticationPrincipal UserDetails principal) {
+    /**
+     * Cancel a pending invitation.
+     * Only OWNER or ADMIN can cancel invitations.
+     */
+    @DeleteMapping("/{groupId}/invites/{memberId}")
+    public void cancelInvitation(@PathVariable Long groupId,
+                                  @PathVariable Long memberId,
+                                  @AuthenticationPrincipal UserDetails principal) {
         invitationService.cancelPendingInvitation(memberId, requireEmail(principal));
     }
 
-    @PostMapping("/invite/accept")
-    public void accept(@RequestBody AcceptInvitationRequest rq,
-                       @AuthenticationPrincipal UserDetails principal) {
+    /**
+     * Accept a group invitation.
+     * User must provide the invitation token received via email.
+     */
+    @PostMapping("/invites/accept")
+    public void acceptInvitation(@RequestBody AcceptInvitationRequest rq,
+                                  @AuthenticationPrincipal UserDetails principal) {
         invitationService.acceptGroupInvitation(rq.token(), requireEmail(principal));
     }
 
     /* ===================== Members ===================== */
 
-    @DeleteMapping("/{id}/members/{memberId}")
-    public void removeMember(@PathVariable Long id,
-                             @PathVariable Long memberId,
-                             @AuthenticationPrincipal UserDetails principal) {
-        memberService.removeMember(id, memberId, requireEmail(principal));
+    /**
+     * Remove a member from the group.
+     * Only OWNER or ADMIN can remove members.
+     * OWNER cannot be removed - must transfer ownership first.
+     */
+    @DeleteMapping("/{groupId}/members/{memberId}")
+    public void removeMemberFromGroup(@PathVariable Long groupId,
+                                      @PathVariable Long memberId,
+                                      @AuthenticationPrincipal UserDetails principal) {
+        memberService.removeMember(groupId, memberId, requireEmail(principal));
     }
 
-    @PatchMapping("/{id}/members/{memberId}")
-    public void changeRole(@PathVariable Long id,
-                           @PathVariable Long memberId,
-                           @RequestBody ChangeMemberRoleRequest rq,
-                           @AuthenticationPrincipal UserDetails principal) {
-        memberService.changeMemberRole(id, memberId, rq.role(), requireEmail(principal));
+    /**
+     * Change member's role in the group.
+     * Only OWNER can change roles.
+     * Available roles: OWNER, ADMIN, MEMBER.
+     */
+    @PatchMapping("/{groupId}/members/{memberId}/role")
+    public void changeMemberRole(@PathVariable Long groupId,
+                                  @PathVariable Long memberId,
+                                  @RequestBody ChangeMemberRoleRequest rq,
+                                  @AuthenticationPrincipal UserDetails principal) {
+        memberService.changeMemberRole(groupId, memberId, rq.role(), requireEmail(principal));
     }
 
     /* ===================== Helpers ===================== */

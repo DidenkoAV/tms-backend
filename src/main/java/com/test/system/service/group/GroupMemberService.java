@@ -1,6 +1,8 @@
 package com.test.system.service.group;
 
 import com.test.system.component.group.GroupAccessControl;
+import com.test.system.component.group.GroupMapper;
+import com.test.system.dto.group.member.GroupMemberResponse;
 import com.test.system.enums.groups.GroupError;
 import com.test.system.enums.groups.GroupRole;
 import com.test.system.enums.groups.MembershipStatus;
@@ -14,6 +16,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+
+import java.util.List;
 
 import static com.test.system.component.group.GroupAccessControl.normEmail;
 
@@ -30,6 +34,41 @@ public class GroupMemberService {
 
     private final GroupMembershipRepository memberships;
     private final GroupAccessControl accessControl;
+    private final GroupMapper mapper;
+
+    /**
+     * Get all members of a group (both ACTIVE and PENDING).
+     * Returns list of members with their roles and status.
+     * Any member of the group can view the member list.
+     *
+     * @param groupId group ID
+     * @param requesterEmailRaw email of the requester (must be a member)
+     * @return list of group members
+     */
+    @Transactional(readOnly = true)
+    public List<GroupMemberResponse> getGroupMembers(Long groupId, String requesterEmailRaw) {
+        String requesterEmail = normEmail(requesterEmailRaw);
+        log.info("{} get members: groupId={}, requester={}", LOG_PREFIX, groupId, requesterEmail);
+
+        Group group = accessControl.requireGroup(groupId);
+        User requester = accessControl.requireUser(requesterEmail);
+
+        // Verify requester is a member of the group
+        accessControl.requireActiveMember(groupId, requester.getId());
+
+        // Get all active and pending members
+        List<GroupMembership> activeMembers = memberships.findGroupMembershipsByStatus(groupId, MembershipStatus.ACTIVE);
+        List<GroupMembership> pendingMembers = memberships.findGroupMembershipsByStatus(groupId, MembershipStatus.PENDING);
+
+        List<GroupMemberResponse> result = new java.util.ArrayList<>();
+        activeMembers.forEach(m -> result.add(mapper.toMemberDto(m)));
+        pendingMembers.forEach(m -> result.add(mapper.toMemberDto(m)));
+
+        log.debug("{} members: groupId={}, active={}, pending={}, total={}",
+                LOG_PREFIX, groupId, activeMembers.size(), pendingMembers.size(), result.size());
+
+        return result;
+    }
 
     /**
      * Removes a member from the group by membership ID.
