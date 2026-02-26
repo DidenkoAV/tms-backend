@@ -21,7 +21,7 @@ public class JiraIssueMapper {
     }
 
     /**
-     * Maps TestCaseIssue entity to DTO with issue details.
+     * Maps TestCaseIssue entity to DTO with issue details from Jira.
      */
     public TestCaseIssueResponse toIssueDto(TestCaseIssue issue, JiraIssueDetailsResponse details) {
         return new TestCaseIssueResponse(
@@ -34,6 +34,24 @@ public class JiraIssueMapper {
                 details.author(),
                 details.priority(),
                 details.attachments()
+        );
+    }
+
+    /**
+     * Maps TestCaseIssue entity to lightweight DTO without fetching Jira details.
+     * Use this for list views to avoid excessive Jira API calls.
+     */
+    public TestCaseIssueResponse toIssueDtoLightweight(TestCaseIssue issue) {
+        return new TestCaseIssueResponse(
+                issue.getId(),
+                issue.getIssueKey(),
+                issue.getIssueUrl(),
+                null,  // summary - not available without Jira call
+                null,  // description - not available without Jira call
+                issue.getStatus(),  // cached status from DB
+                null,  // author - not available without Jira call
+                null,  // priority - not available without Jira call
+                null   // attachments - not available without Jira call
         );
     }
 

@@ -21,7 +21,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Manages Jira issues linked to test cases and provides metadata operations.
@@ -90,15 +93,74 @@ public class JiraIssueService {
 
     /**
      * Lists all issues linked to a test case.
+     * NOTE: Does NOT fetch details from Jira to avoid performance issues.
+     * Use listJiraIssuesWithDetails() if you need full Jira details.
+     */
+    @Transactional(readOnly = true)
+    public List<TestCaseIssueResponse> listJiraIssues(Long groupId, Long testCaseId) {
+        log.debug("[JiraIssue] List (lightweight): groupId={}, tcId={}", groupId, testCaseId);
+
+        return getIssuesForTestCase(testCaseId).stream()
+                .map(mapper::toIssueDtoLightweight)
+                .toList();
+    }
+
+    /**
+     * Lists all issues linked to a test case WITH full details from Jira.
+     * WARNING: Makes HTTP request to Jira for each issue - use sparingly!
      */
     @Transactional
-    public List<TestCaseIssueResponse> listJiraIssues(Long groupId, Long testCaseId) {
-        log.info("[JiraIssue] List: groupId={}, tcId={}", groupId, testCaseId);
-        cleanupBrokenLinks(groupId, testCaseId);
+    public List<TestCaseIssueResponse> listJiraIssuesWithDetails(Long groupId, Long testCaseId) {
+        log.info("[JiraIssue] List (with details): groupId={}, tcId={}", groupId, testCaseId);
+        // DISABLED: cleanupBrokenLinks causes too many Jira API calls when loading test case list
+        // cleanupBrokenLinks(groupId, testCaseId);
 
-      return getIssuesForTestCase(testCaseId).stream()
-              .map(link -> toDto(groupId, link))
-              .toList();
+        return getIssuesForTestCase(testCaseId).stream()
+                .map(link -> toDto(groupId, link))
+                .toList();
+    }
+
+    /**
+     * Batch load Jira issues for multiple test cases in one query.
+     * This is much more efficient than calling listJiraIssues() for each test case.
+     * Returns lightweight DTOs without fetching details from Jira API.
+     *
+     * @param groupId the group ID
+     * @param testCaseIds list of test case IDs
+     * @return Map where key is testCaseId and value is list of Jira issues for that test case
+     */
+    @Transactional(readOnly = true)
+    public Map<Long, List<TestCaseIssueResponse>> listJiraIssuesBatch(Long groupId, List<Long> testCaseIds) {
+        log.info("[JiraIssue] Batch list: groupId={}, testCaseCount={}", groupId, testCaseIds != null ? testCaseIds.size() : 0);
+
+        if (testCaseIds == null || testCaseIds.isEmpty()) {
+            return new HashMap<>();
+        }
+
+        // Load test cases to validate they exist
+        List<TestCase> testCases = testCases.findAllById(testCaseIds);
+
+        // Load all issues for these test cases in ONE query
+        List<TestCaseIssue> allIssues = issueLinks.findByTestCaseIn(testCases);
+
+        log.debug("[JiraIssue] Loaded {} issues for {} test cases", allIssues.size(), testCases.size());
+
+        // Group issues by test case ID
+        Map<Long, List<TestCaseIssueResponse>> result = allIssues.stream()
+                .collect(Collectors.groupingBy(
+                        issue -> issue.getTestCase().getId(),
+                        Collectors.mapping(
+                                mapper::toIssueDtoLightweight,
+                                Collectors.toList()
+                        )
+                ));
+
+        // Ensure all requested test case IDs are in the result (even if they have no issues)
+        for (Long testCaseId : testCaseIds) {
+            result.putIfAbsent(testCaseId, List.of());
+        }
+
+        return result;
     }
 
     /**
@@ -121,6 +183,8 @@ public class JiraIssueService {
             try {
                 getIssueDetails(groupId, link.getIssueKey());
             } catch (RuntimeException e) {
+                log.warn("[JiraIssue] Broken link detected - deleting: linkId={}, issueKey={}, error={}",
+                        link.getId(), link.getIssueKey(), e.getMessage());
                 issueLinks.deleteById(link.getId());
             }
         }

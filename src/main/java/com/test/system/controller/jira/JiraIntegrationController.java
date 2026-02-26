@@ -81,6 +81,22 @@ public class JiraIntegrationController {
         return issueService.listJiraIssues(groupId, testCaseId);
     }
 
+    /**
+     * Batch endpoint to get Jira issues for multiple test cases in one request.
+     * This is much more efficient than calling /issues/{groupId}/{testCaseId} for each test case.
+     *
+     * @param groupId the group ID
+     * @param testCaseIds list of test case IDs
+     * @return Map where key is testCaseId and value is list of Jira issues for that test case
+     */
+    @PostMapping("/issues/batch/{groupId}")
+    public Map<Long, List<TestCaseIssueResponse>> listJiraIssuesBatch(
+            @PathVariable Long groupId,
+            @RequestBody List<Long> testCaseIds
+    ) {
+        return issueService.listJiraIssuesBatch(groupId, testCaseIds);
+    }
+
     @GetMapping("/issue-types/{groupId}")
     public List<String> getJiraIssueTypes(@PathVariable Long groupId) {
         return issueService.getAvailableIssueTypes(groupId);
