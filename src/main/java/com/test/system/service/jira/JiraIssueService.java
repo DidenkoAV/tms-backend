@@ -86,7 +86,7 @@ public class JiraIssueService {
      * even if subsequent operations (like fetching details from Jira) fail.
      */
     @Transactional
-    private TestCaseIssue saveIssueLink(TestCase testCase, JiraConnection conn, String issueKey) {
+    protected TestCaseIssue saveIssueLink(TestCase testCase, JiraConnection conn, String issueKey) {
         TestCaseIssue link = buildLink(testCase, conn, issueKey);
         return issueLinks.save(link);
     }
@@ -138,12 +138,12 @@ public class JiraIssueService {
         }
 
         // Load test cases to validate they exist
-        List<TestCase> testCases = testCases.findAllById(testCaseIds);
+        List<TestCase> loadedTestCases = testCases.findAllById(testCaseIds);
 
         // Load all issues for these test cases in ONE query
-        List<TestCaseIssue> allIssues = issueLinks.findByTestCaseIn(testCases);
+        List<TestCaseIssue> allIssues = issueLinks.findByTestCaseIn(loadedTestCases);
 
-        log.debug("[JiraIssue] Loaded {} issues for {} test cases", allIssues.size(), testCases.size());
+        log.debug("[JiraIssue] Loaded {} issues for {} test cases", allIssues.size(), loadedTestCases.size());
 
         // Group issues by test case ID
         Map<Long, List<TestCaseIssueResponse>> result = allIssues.stream()
