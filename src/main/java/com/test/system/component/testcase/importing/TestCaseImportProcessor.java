@@ -414,6 +414,7 @@ public class TestCaseImportProcessor {
                 dto.title(),
                 typeId,
                 priorityId,
+                dto.assignedTo(),
                 dto.estimateSeconds(),
                 dto.preconditions(),
                 dto.sortIndex(),

@@ -53,6 +53,10 @@ public class TestCase {
     @Column(name = "created_by")
     private Long createdBy;
 
+    /** Assigned to (user.id) - person responsible for this test case */
+    @Column(name = "assigned_to")
+    private Long assignedTo;
+
     @Builder.Default
     @Column(name = "created_at", nullable = false)
     private Instant createdAt = Instant.now();
@@ -110,6 +114,7 @@ public class TestCase {
     private AutomationStatus automationStatus = AutomationStatus.NOT_AUTOMATED;
 
     @Builder.Default
+    @JdbcTypeCode(SqlTypes.ARRAY)
     @Column(name = "tags", columnDefinition = "text[]")
     private String[] tags = new String[0];
 

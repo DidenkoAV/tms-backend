@@ -38,7 +38,10 @@ public record TestCaseResponse(
         Instant updatedAt,
         Long createdBy,
         String createdByName,
-        String createdByEmail
+        String createdByEmail,
+        Long assignedTo,
+        String assignedToName,
+        String assignedToEmail
 ) {
 }
 

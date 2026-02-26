@@ -21,6 +21,7 @@ public record UpdateTestCaseRequest(
 
         Long typeId,
         Long priorityId,
+        Long assignedTo,
 
         @PositiveOrZero
         Integer estimateSeconds,

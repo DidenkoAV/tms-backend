@@ -43,6 +43,7 @@ public class TestCaseMapper {
      */
     public TestCaseResponse toResponse(TestCase testCase, LookupMaps lookupMaps) {
         User author = lookupMaps.getAuthor(testCase.getCreatedBy());
+        User assignee = lookupMaps.getAuthor(testCase.getAssignedTo());
 
         return new TestCaseResponse(
                 testCase.getId(),
@@ -72,7 +73,10 @@ public class TestCaseMapper {
                 testCase.getUpdatedAt(),
                 testCase.getCreatedBy(),
                 author != null ? author.getFullName() : null,
-                author != null ? author.getEmail() : null
+                author != null ? author.getEmail() : null,
+                testCase.getAssignedTo(),
+                assignee != null ? assignee.getFullName() : null,
+                assignee != null ? assignee.getEmail() : null
         );
     }
 
@@ -97,6 +101,7 @@ public class TestCaseMapper {
                 .title(trimToEmpty(request.title()))
                 .typeId(request.typeId())
                 .priorityId(request.priorityId())
+                .assignedTo(request.assignedTo())
                 .estimateSeconds(request.estimateSeconds() != null ? request.estimateSeconds() : 0)
                 .preconditions(request.preconditions())
                 .sortIndex(Optional.ofNullable(request.sortIndex()).orElse(0))
@@ -129,6 +134,7 @@ public class TestCaseMapper {
     public void updateFromRequest(TestCase existing, UpdateTestCaseRequest request, Instant now) {
         existing.setPriorityId(request.priorityId());
         existing.setTypeId(request.typeId());
+        existing.setAssignedTo(request.assignedTo());
         existing.setEstimateSeconds(defaultInt(request.estimateSeconds()));
         existing.setSortIndex(defaultInt(request.sortIndex()));
         existing.setPreconditions(request.preconditions());
@@ -162,6 +168,7 @@ public class TestCaseMapper {
     public void updateFromDto(TestCase existing, TestCaseResponse dto, Instant now) {
         existing.setTypeId(dto.typeId());
         existing.setPriorityId(dto.priorityId());
+        existing.setAssignedTo(dto.assignedTo());
         existing.setEstimateSeconds(dto.estimateSeconds());
         existing.setPreconditions(dto.preconditions());
         existing.setExpectedResult(dto.expectedResult());

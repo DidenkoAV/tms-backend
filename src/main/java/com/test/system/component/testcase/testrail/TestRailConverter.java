@@ -330,7 +330,10 @@ public class TestRailConverter {
                 Instant.now(),                          // updatedAt
                 null,                                   // createdBy
                 null,                                   // createdByName
-                null                                    // createdByEmail
+                null,                                   // createdByEmail
+                null,                                   // assignedTo
+                null,                                   // assignedToName
+                null                                    // assignedToEmail
         );
     }
 
