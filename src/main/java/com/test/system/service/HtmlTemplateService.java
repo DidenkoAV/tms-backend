@@ -41,78 +41,81 @@ public class HtmlTemplateService {
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>%s</title>
         </head>
-        <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f8fafc;">
-            <table role="presentation" style="width: 100%%; border-collapse: collapse; background-color: #f8fafc;">
+        <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #fafafa;">
+            <table role="presentation" style="width: 100%%; border-collapse: collapse; background-color: #fafafa;">
                 <tr>
-                    <td align="center" style="padding: 40px 20px;">
+                    <td align="center" style="padding: 48px 20px;">
                         <!-- Main Container -->
-                        <table role="presentation" style="width: 100%%; max-width: 600px; border-collapse: collapse; background-color: #ffffff; border-radius: 16px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
-                            
+                        <table role="presentation" style="width: 100%%; max-width: 560px; border-collapse: collapse; background-color: #ffffff; border-radius: 16px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08); border: 1px solid #e5e7eb;">
+
                             <!-- Header with Logo -->
                             <tr>
-                                <td style="padding: 40px 40px 30px 40px; text-align: center; background: linear-gradient(135deg, #7c1a87 0%%, #6a1675 100%%); border-radius: 16px 16px 0 0;">
-                                    <div style="display: inline-block; background-color: #ffffff; width: 64px; height: 64px; border-radius: 16px; padding: 12px; margin-bottom: 16px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);">
-                                        <svg width="40" height="40" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-                                            <g transform="translate(-165 -52)" fill="#7c1a87">
-                                                <path d="m189 52c13.255 0 24 10.745 24 24s-10.745 24-24 24-24-10.745-24-24 10.745-24 24-24zm13 11l-12.792 9.8003-13.208-9.7817v25.981h5.8113v-14.633l7.3971 5.5031 12.792-9.5903v-7.2798zm-6 26h6v-5h-6v5z"/>
-                                            </g>
+                                <td style="padding: 40px 40px 32px 40px; text-align: center;">
+                                    <!-- Logo Icon -->
+                                    <div style="display: inline-block; background-color: #7c1a87; width: 64px; height: 64px; border-radius: 16px; padding: 0; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(124, 26, 135, 0.2);">
+                                        <svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                                            <text x="32" y="44" font-family="Arial, sans-serif" font-size="36" font-weight="bold" fill="#ffffff" text-anchor="middle">M</text>
                                         </svg>
                                     </div>
-                                    <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600; letter-spacing: -0.5px;">
-                                        Messagepoint <span style="font-weight: 400;">TMS</span>
-                                    </h1>
+                                    <!-- Brand Name -->
+                                    <div style="margin: 0; color: #1f2937; font-size: 22px; font-weight: 600; letter-spacing: -0.025em;">
+                                        Messagepoint TMS
+                                    </div>
+                                    <div style="margin: 4px 0 0 0; color: #6b7280; font-size: 14px; font-weight: 400;">
+                                        Your smart test workspace
+                                    </div>
                                 </td>
                             </tr>
-                            
+
                             <!-- Content -->
                             <tr>
-                                <td style="padding: 40px;">
-                                    <h2 style="margin: 0 0 16px 0; color: #0f172a; font-size: 20px; font-weight: 600;">
+                                <td style="padding: 0 40px 40px 40px;">
+                                    <h2 style="margin: 0 0 12px 0; color: #1f2937; font-size: 18px; font-weight: 600;">
                                         Hello %s,
                                     </h2>
-                                    <p style="margin: 0 0 24px 0; color: #475569; font-size: 16px; line-height: 1.6;">
+                                    <p style="margin: 0 0 24px 0; color: #4b5563; font-size: 15px; line-height: 1.6;">
                                         %s
                                     </p>
-                                    
+
                                     <!-- Button -->
-                                    <table role="presentation" style="margin: 32px 0;">
+                                    <table role="presentation" style="margin: 24px 0;">
                                         <tr>
-                                            <td style="border-radius: 12px; background: linear-gradient(135deg, #7c1a87 0%%, #6a1675 100%%); box-shadow: 0 4px 12px rgba(124, 26, 135, 0.3);">
-                                                <a href="%s" target="_blank" style="display: inline-block; padding: 16px 32px; color: #ffffff; text-decoration: none; font-size: 16px; font-weight: 600; border-radius: 12px;">
+                                            <td style="border-radius: 8px; background-color: #7c1a87;">
+                                                <a href="%s" target="_blank" style="display: inline-block; padding: 14px 28px; color: #ffffff; text-decoration: none; font-size: 15px; font-weight: 600; border-radius: 8px;">
                                                     %s
                                                 </a>
                                             </td>
                                         </tr>
                                     </table>
-                                    
+
                                     <!-- Alternative Link -->
-                                    <div style="margin-top: 32px; padding: 16px; background-color: #f8fafc; border-radius: 8px; border-left: 4px solid #7c1a87;">
-                                        <p style="margin: 0 0 8px 0; color: #64748b; font-size: 13px; font-weight: 500;">
+                                    <div style="margin-top: 28px; padding: 14px; background-color: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb;">
+                                        <p style="margin: 0 0 6px 0; color: #6b7280; font-size: 13px; font-weight: 500;">
                                             If the button doesn't work, copy and paste this link:
                                         </p>
-                                        <a href="%s" style="color: #7c1a87; font-size: 13px; word-break: break-all; text-decoration: none;">
+                                        <a href="%s" style="color: #7c1a87; font-size: 12px; word-break: break-all; text-decoration: none;">
                                             %s
                                         </a>
                                     </div>
                                 </td>
                             </tr>
-                            
+
                             <!-- Footer -->
                             <tr>
-                                <td style="padding: 32px 40px; background-color: #f8fafc; border-radius: 0 0 16px 16px; border-top: 1px solid #e2e8f0;">
-                                    <p style="margin: 0 0 12px 0; color: #64748b; font-size: 14px; line-height: 1.5;">
+                                <td style="padding: 24px 40px; background-color: #f9fafb; border-radius: 0 0 16px 16px; border-top: 1px solid #e5e7eb;">
+                                    <p style="margin: 0 0 8px 0; color: #6b7280; font-size: 13px; line-height: 1.5;">
                                         %s
                                     </p>
-                                    <p style="margin: 0; color: #94a3b8; font-size: 12px;">
+                                    <p style="margin: 0; color: #9ca3af; font-size: 12px;">
                                         © 2026 Messagepoint TMS. All rights reserved.
                                     </p>
                                 </td>
                             </tr>
-                            
+
                         </table>
-                        
+
                         <!-- Bottom Spacing -->
-                        <p style="margin: 24px 0 0 0; color: #94a3b8; font-size: 12px; text-align: center;">
+                        <p style="margin: 20px 0 0 0; color: #9ca3af; font-size: 12px; text-align: center;">
                             This is an automated message, please do not reply to this email.
                         </p>
                     </td>
