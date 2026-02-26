@@ -193,8 +193,14 @@ public class TestCaseImportProcessor {
             return;
         }
 
+        // Build full path for current suite (text-based path like "ui/umh/chrome")
+        String fullPath = currentPath != null
+                ? currentPath + "/" + suiteName
+                : suiteName;
+
         // Use full path as key to avoid conflicts between suites with same name but different parents
         String fullKey = buildSuiteKey(parentId, suiteName, suiteByName);
+        String fullPathKey = normalizeKey(fullPath);
         String simpleKey = normalizeKey(suiteName);
         Long suiteId;
 
@@ -204,8 +210,12 @@ public class TestCaseImportProcessor {
             Suite suite = createSuite(projectId, parentId, depth, suiteName, suiteDto.description());
             suiteId = suite.getId();
 
-            // Store with full key (always unique)
+            // Store with full key (always unique) - uses parentId/name format
             suiteByName.put(fullKey, suiteId);
+
+            // Store with full path key - this allows test cases to find suites by full path
+            suiteByName.put(fullPathKey, suiteId);
+            log.debug("{} Registered suite with full path key: {} -> {}", LOG_PREFIX, fullPathKey, suiteId);
 
             // Also store with simple key if not already taken
             // This allows test cases to find suites by simple name when there's no ambiguity
@@ -213,8 +223,8 @@ public class TestCaseImportProcessor {
                 suiteByName.put(simpleKey, suiteId);
                 log.debug("{} Registered suite with simple key: {} -> {}", LOG_PREFIX, simpleKey, suiteId);
             } else {
-                log.debug("{} Simple key {} already taken, only using full key {}",
-                        LOG_PREFIX, simpleKey, fullKey);
+                log.debug("{} Simple key {} already taken, only using full keys ({}, {})",
+                        LOG_PREFIX, simpleKey, fullKey, fullPathKey);
             }
 
             log.debug("{} Created hierarchical suite: {} (id={}, parent={}, depth={})",
@@ -225,20 +235,14 @@ public class TestCaseImportProcessor {
                     LOG_PREFIX, suiteName, suiteId);
         }
 
-        // Build full path for current suite
-        String fullPath = currentPath != null
-                ? currentPath + "/" + suiteName
-                : suiteName;
-
         log.debug("{} Current suite full path: '{}'", LOG_PREFIX, fullPath);
 
         // Process children - use full path for lookup to distinguish between suites with same name
         // For example: children of "ui/sync/chrome" vs children of "ui/umh/chrome"
-        String lookupKey = normalizeKey(fullPath);
-        List<HierarchicalSuiteImportDto> children = childrenByParent.get(lookupKey);
+        List<HierarchicalSuiteImportDto> children = childrenByParent.get(fullPathKey);
 
         log.debug("{} Looking for children of '{}' using key '{}': found {} children",
-                LOG_PREFIX, fullPath, lookupKey, children != null ? children.size() : 0);
+                LOG_PREFIX, fullPath, fullPathKey, children != null ? children.size() : 0);
 
         if (children != null) {
             log.info("{} Processing {} children of suite '{}'", LOG_PREFIX, children.size(), fullPath);

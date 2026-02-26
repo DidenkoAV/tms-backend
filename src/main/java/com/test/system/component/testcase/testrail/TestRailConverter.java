@@ -84,7 +84,7 @@ public class TestRailConverter {
         // Log root suites first
         List<HierarchicalSuiteImportDto> rootSuites = byParent.getOrDefault("ROOT", List.of());
         for (HierarchicalSuiteImportDto root : rootSuites) {
-            logSuiteTree(root, 0, byParent);
+            logSuiteTree(root, 0, null, byParent);
         }
 
         log.info("{} =====================================", LOG_PREFIX);
@@ -92,19 +92,30 @@ public class TestRailConverter {
 
     /**
      * Recursively log suite tree.
+     *
+     * @param suite the suite to log
+     * @param level the indentation level
+     * @param currentPath the full path to current suite (null for root)
+     * @param byParent map of children grouped by parent full path
      */
     private void logSuiteTree(
             HierarchicalSuiteImportDto suite,
             int level,
+            String currentPath,
             Map<String, List<HierarchicalSuiteImportDto>> byParent
     ) {
         String indent = "  ".repeat(level);
         log.info("{} {}- {}", LOG_PREFIX, indent, suite.name());
 
-        // Log children
-        List<HierarchicalSuiteImportDto> children = byParent.getOrDefault(suite.name(), List.of());
+        // Build full path for current suite
+        String fullPath = currentPath != null
+                ? currentPath + "/" + suite.name()
+                : suite.name();
+
+        // Log children - use full path to find them
+        List<HierarchicalSuiteImportDto> children = byParent.getOrDefault(fullPath, List.of());
         for (HierarchicalSuiteImportDto child : children) {
-            logSuiteTree(child, level + 1, byParent);
+            logSuiteTree(child, level + 1, fullPath, byParent);
         }
     }
 
@@ -153,14 +164,16 @@ public class TestRailConverter {
                 : sectionName;
 
         // Use full parent path for hierarchical import to distinguish between suites with same name
-        // For example: "ui/sync/chrome" vs "ui/umh/chrome" - both have children, but different parents
-        String parentSuiteKey = parentSuitePath;  // Use full path, not just last component
+        // For example: "ui/sync/chrome" vs "ui/umh/chrome" - both have "chrome" name, but different parents
+        // The parentName should be the full path to the parent, not just the last component
+        String parentSuiteFullPath = parentSuitePath;
 
         // Create suite for this section (if not already exists)
-        createSuiteIfNotExists(sectionName, section.getDescription(), parentSuiteKey, suites);
+        createSuiteIfNotExists(sectionName, section.getDescription(), parentSuiteFullPath, suites);
 
-        // Process test cases in this section - use the leaf name, not full path
-        processTestCasesInSection(section, sectionName, cases, projectId);
+        // Process test cases in this section - use the FULL PATH to distinguish between suites with same name
+        // For example: "ui/umh/chrome" vs "ui/connected/chrome"
+        processTestCasesInSection(section, currentSuitePath, cases, projectId);
 
         // Recursively process child sections - pass full path
         processChildSections(section, currentSuitePath, suites, cases, projectId);
