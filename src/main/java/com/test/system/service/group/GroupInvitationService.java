@@ -75,13 +75,6 @@ public class GroupInvitationService {
         User inviter = accessControl.requireUser(inviterEmail);
         User invitee = accessControl.requireUser(inviteeEmail);
 
-        // Cannot invite to personal groups
-        if (group.isPersonal()) {
-            log.warn("{} attempt to invite to personal group: groupId={}, inviter={}",
-                    LOG_PREFIX, groupId, inviterEmail);
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, GroupError.CANNOT_INVITE_TO_PERSONAL.name());
-        }
-
         accessControl.requireOwnerActiveMember(groupId, inviter.getId());
 
         int activeCount = memberships.countMembershipsByStatus(groupId, MembershipStatus.ACTIVE);
