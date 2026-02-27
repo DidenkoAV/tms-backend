@@ -22,7 +22,7 @@ public class SecurityWhitelist {
     private static final List<String> PUBLIC_PATHS = List.of(
             // Health & monitoring
             "/api/health",
-            
+
             // Authentication endpoints
             "/api/auth/register",
             "/api/auth/login",
@@ -31,15 +31,18 @@ public class SecurityWhitelist {
             "/api/auth/verification/resend",
             "/api/auth/password/request-reset",
             "/api/auth/password/reset",
-            
+
+            // Group invitations (from email links)
+            "/api/groups/invites/accept",
+
             // API documentation
             "/v3/api-docs/**",
             "/swagger-ui/**",
-            
+
             // OAuth2 endpoints
             "/oauth2/**",
             "/login/oauth2/**",
-            
+
             // System endpoints
             "/error",
             "/favicon.ico"

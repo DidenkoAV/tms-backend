@@ -96,6 +96,39 @@ public class UserPasswordService {
         log.info("{} password reset completed: userId={}, email={}", LOG_PREFIX, user.getId(), user.getEmail());
     }
 
+    /* ===================== Set Password (for placeholder users) ===================== */
+
+    /**
+     * Sets password for a placeholder user (created during invitation).
+     * This is used when a user accepts an invitation and needs to set their password for the first time.
+     *
+     * @param emailRaw user's email
+     * @param newPassword new password to set
+     */
+    @Transactional
+    public void setPasswordForPlaceholderUser(String emailRaw, String newPassword) {
+        String email = normEmail(emailRaw);
+        User user = users.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("USER_NOT_FOUND"));
+
+        // Validate that this is actually a placeholder user scenario
+        // (we don't enforce this strictly, but log it for monitoring)
+        if (!user.isEnabled()) {
+            log.warn("{} attempting to set password for disabled user: userId={}, email={}",
+                    LOG_PREFIX, user.getId(), user.getEmail());
+        }
+
+        passwordPolicy.validate(newPassword, user.getEmail(), user.getFullName(), null);
+
+        user.setPassword(encoder.encode(newPassword));
+        user.setEnabled(true); // Ensure user is enabled
+        users.save(user);
+        savePasswordChangeLog(user);
+
+        log.info("{} password set for placeholder user: userId={}, email={}",
+                LOG_PREFIX, user.getId(), user.getEmail());
+    }
+
     /* ===================== Private Helpers ===================== */
 
     private void enforcePasswordChangeRateLimit(User user) {

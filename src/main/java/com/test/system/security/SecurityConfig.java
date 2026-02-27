@@ -44,6 +44,7 @@ public class SecurityConfig {
             "/api/auth/verification/resend",
             "/api/auth/password/request-reset",
             "/api/auth/password/reset",
+            "/api/groups/invites/accept",  // Group invitation acceptance (from email links)
             "/swagger-ui/**",
             "/v3/api-docs/**",
 

@@ -5,6 +5,7 @@ import com.test.system.dto.authorization.auth.LoginRequest;
 import com.test.system.dto.authorization.auth.RegisterRequest;
 import com.test.system.dto.authorization.common.StatusResponse;
 import com.test.system.dto.authorization.password.ResetPasswordRequest;
+import com.test.system.dto.authorization.password.SetPasswordRequest;
 import com.test.system.service.authorization.user.UserAuthenticationService;
 import com.test.system.utils.logging.LoggingUtils;
 import io.swagger.v3.oas.annotations.Operation;
@@ -158,5 +159,25 @@ public class AuthPublicController {
     ) {
         authService.completePasswordReset(token, body.newPassword());
         return ResponseEntity.ok(StatusResponse.ok());
+    }
+
+    @Operation(
+            summary = "Set password for new user",
+            description = """
+                    Set password for a placeholder user (created during group invitation).
+                    After setting the password, the user is automatically logged in and receives a JWT token.
+                    """
+    )
+    @PostMapping("/password/set")
+    public ResponseEntity<AuthenticationResponse> setPassword(
+            @RequestBody @Valid SetPasswordRequest req,
+            HttpServletRequest request
+    ) {
+        String email = safeEmail(req.email());
+        log.info("Set password request for email: {}", email);
+
+        ResponseEntity<AuthenticationResponse> response = authService.setPasswordAndLogin(email, req.password(), request);
+        LoggingUtils.logAuthEvent(log, "SET_PASSWORD", email, true);
+        return response;
     }
 }

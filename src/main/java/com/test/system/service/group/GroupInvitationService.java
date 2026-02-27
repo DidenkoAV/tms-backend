@@ -2,6 +2,7 @@ package com.test.system.service.group;
 
 import com.test.system.component.group.GroupAccessControl;
 import com.test.system.component.group.GroupMapper;
+import com.test.system.dto.group.invitation.InviteAcceptResult;
 import com.test.system.dto.group.member.GroupMemberResponse;
 import com.test.system.enums.auth.RoleName;
 import com.test.system.enums.auth.TokenType;
@@ -133,13 +134,16 @@ public class GroupInvitationService {
     }
 
     /**
-     * Accepts a group invitation using the token from email.
-     * Validates token, checks permissions, and activates membership.
+     * Accepts a group invitation using the token from email (PUBLIC endpoint version).
+     * Validates token and activates membership. Email validation is optional.
+     *
+     * @param rawToken the invitation token from email
+     * @param currentEmailRaw optional email for additional validation (can be null for unauthenticated requests)
+     * @return InviteAcceptResult with information about the acceptance
      */
     @Transactional
-    public void acceptGroupInvitation(String rawToken, String currentEmailRaw) {
-        String currentEmail = normEmail(currentEmailRaw);
-        log.info("{} accept invite: email={}, token={}", LOG_PREFIX, currentEmail, rawToken);
+    public InviteAcceptResult acceptGroupInvitationPublic(String rawToken, String currentEmailRaw) {
+        log.info("{} accept invite (public): email={}, token={}", LOG_PREFIX, currentEmailRaw, rawToken);
 
         if (rawToken == null || rawToken.isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, GroupError.TOKEN_REQUIRED.name());
@@ -164,15 +168,33 @@ public class GroupInvitationService {
         var vt = tokens.validateAndConsumeToken(rawToken, TokenType.GROUP_INVITE);
         User invitee = vt.getUser();
 
-        if (!invitee.getEmail().equalsIgnoreCase(currentEmail)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, GroupError.EMAIL_MISMATCH.name());
+        // Optional email validation: if user is authenticated, verify it matches the token
+        if (currentEmailRaw != null && !currentEmailRaw.isBlank()) {
+            String currentEmail = normEmail(currentEmailRaw);
+            if (!invitee.getEmail().equalsIgnoreCase(currentEmail)) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, GroupError.EMAIL_MISMATCH.name());
+            }
         }
+
+        // Check if this is a placeholder user (created during invitation)
+        boolean wasPlaceholder = !invitee.isEnabled();
+
+        // Enable placeholder users when they accept invitation
+        // This allows them to complete registration or set password
+        if (wasPlaceholder) {
+            invitee.setEnabled(true);
+            users.save(invitee);
+            log.info("{} enabled placeholder user: userId={}, email={}", LOG_PREFIX, invitee.getId(), invitee.getEmail());
+        }
+
+        // Get group information for the result
+        Group group = accessControl.requireGroup(groupId);
 
         GroupMembership existing = memberships.findMembership(groupId, invitee.getId()).orElse(null);
         if (existing != null && existing.getStatus() == MembershipStatus.ACTIVE) {
             log.info("{} accept invite no-op: already ACTIVE, groupId={}, userId={}",
                     LOG_PREFIX, groupId, invitee.getId());
-            return;
+            return buildAcceptResult(invitee, group, wasPlaceholder);
         }
 
         // Check limit for both new members and reactivating REMOVED members
@@ -182,7 +204,6 @@ public class GroupInvitationService {
         }
 
         if (existing == null) {
-            Group group = accessControl.requireGroup(groupId);
             GroupMembership gm = GroupMembership.builder()
                     .group(group)
                     .user(invitee)
@@ -197,7 +218,23 @@ public class GroupInvitationService {
             memberships.save(existing);
         }
 
-        log.info("{} invite accepted: groupId={}, userId={}", LOG_PREFIX, groupId, invitee.getId());
+        log.info("{} invite accepted: groupId={}, userId={}, wasPlaceholder={}",
+                LOG_PREFIX, groupId, invitee.getId(), wasPlaceholder);
+
+        return buildAcceptResult(invitee, group, wasPlaceholder);
+    }
+
+    /**
+     * Accepts a group invitation using the token from email (AUTHENTICATED endpoint version).
+     * Validates token, checks permissions, and activates membership.
+     * Requires user to be authenticated.
+     *
+     * @deprecated Use {@link #acceptGroupInvitationPublic(String, String)} instead
+     */
+    @Transactional
+    @Deprecated
+    public void acceptGroupInvitation(String rawToken, String currentEmailRaw) {
+        acceptGroupInvitationPublic(rawToken, currentEmailRaw);
     }
 
     /**
@@ -308,5 +345,17 @@ public class GroupInvitationService {
         log.info("{} created placeholder user: userId={}, email={}", LOG_PREFIX, saved.getId(), saved.getEmail());
 
         return saved;
+    }
+
+    /**
+     * Builds the result object for invitation acceptance.
+     */
+    private InviteAcceptResult buildAcceptResult(User user, Group group, boolean needsPassword) {
+        return InviteAcceptResult.builder()
+                .needsPassword(needsPassword)
+                .email(user.getEmail())
+                .groupName(group.getName())
+                .groupId(group.getId())
+                .build();
     }
 }

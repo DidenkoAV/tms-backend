@@ -87,7 +87,7 @@ public class MailService {
     }
 
     /**
-     * Group invitation (SPA deep link).
+     * Group invitation (direct backend link).
      */
     public void sendGroupInvite(
             String to,
@@ -96,7 +96,7 @@ public class MailService {
             String inviterName,
             String rawToken
     ) {
-        String link = buildAppLink("/invite/accept", rawToken);
+        String link = buildLink("/api/groups/invites/accept", rawToken);
         String subject = "You've been invited to join a group";
 
         String safeInviteeName = (inviteeName == null || inviteeName.isBlank()) ? to : inviteeName;

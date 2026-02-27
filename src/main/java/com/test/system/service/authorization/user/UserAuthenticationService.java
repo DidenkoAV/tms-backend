@@ -163,6 +163,23 @@ public class UserAuthenticationService {
         passwordService.resetPassword(resetToken, newPassword);
     }
 
+    /**
+     * Sets password for a placeholder user and returns authentication response.
+     * This is used when a user accepts an invitation and sets their password for the first time.
+     */
+    @Transactional
+    public ResponseEntity<AuthenticationResponse> setPasswordAndLogin(
+            String email,
+            String password,
+            HttpServletRequest request
+    ) {
+        log.info("{} setting password for placeholder user: email={}", LOG_PREFIX, email);
+        passwordService.setPasswordForPlaceholderUser(email, password);
+
+        // Automatically log the user in after setting password
+        return authenticateUser(email, password, request);
+    }
+
     /* ===================== Cookie Management ===================== */
 
     /**

@@ -2,7 +2,6 @@ package com.test.system.controller.group;
 
 import com.test.system.dto.group.info.GroupDetailsResponse;
 import com.test.system.dto.group.info.GroupSummaryResponse;
-import com.test.system.dto.group.invitation.AcceptInvitationRequest;
 import com.test.system.dto.group.invitation.InviteMemberRequest;
 import com.test.system.dto.group.management.CreateGroupRequest;
 import com.test.system.dto.group.management.RenameGroupRequest;
@@ -16,10 +15,13 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.servlet.view.RedirectView;
 
 import java.util.List;
 
@@ -33,6 +35,9 @@ public class GroupController {
     private final GroupManagementService groupManagementService;
     private final GroupInvitationService invitationService;
     private final GroupMemberService memberService;
+
+    @Value("${app.public-base-url:http://localhost:5173}")
+    private String frontendBaseUrl;
 
     /* ===================== Queries ===================== */
 
@@ -147,13 +152,45 @@ public class GroupController {
     }
 
     /**
-     * Accept a group invitation.
-     * User must provide the invitation token received via email.
+     * Accept a group invitation from email link.
+     *
+     * This endpoint is PUBLIC (no authentication required) because:
+     * - The invitation token itself contains the user information
+     * - User might have expired JWT when clicking email link
+     * - Token validation ensures only the invited user can accept
+     *
+     * Flow for NEW users (placeholder):
+     * 1. User clicks email link: http://localhost:8083/api/groups/invites/accept?token=xxx
+     * 2. Backend validates token, accepts invitation, enables user
+     * 3. Redirects to: http://localhost:5173/invite/accepted?email=user@example.com&groupName=Team&needsPassword=true
+     * 4. Frontend shows: "Invitation accepted! Please set your password"
+     * 5. User sets password and can access the group
+     *
+     * Flow for EXISTING users:
+     * 1. User clicks email link
+     * 2. Backend accepts invitation
+     * 3. Redirects to: http://localhost:5173/invite/accepted?email=user@example.com&groupName=Team
+     * 4. Frontend shows: "Invitation accepted! Redirecting to groups..."
      */
-    @PostMapping("/invites/accept")
-    public void acceptInvitation(@RequestBody AcceptInvitationRequest rq,
-                                  @AuthenticationPrincipal UserDetails principal) {
-        invitationService.acceptGroupInvitation(rq.token(), requireEmail(principal));
+    @GetMapping("/invites/accept")
+    public RedirectView acceptInvitation(@RequestParam String token) {
+        if (token == null || token.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invitation token is required");
+        }
+
+        // Accept invitation (no authentication required - token contains user info)
+        var result = invitationService.acceptGroupInvitationPublic(token, null);
+
+        // Build redirect URL with all necessary information
+        StringBuilder redirectUrl = new StringBuilder(frontendBaseUrl + "/invite/accepted");
+        redirectUrl.append("?email=").append(java.net.URLEncoder.encode(result.getEmail(), java.nio.charset.StandardCharsets.UTF_8));
+        redirectUrl.append("&groupName=").append(java.net.URLEncoder.encode(result.getGroupName(), java.nio.charset.StandardCharsets.UTF_8));
+
+        if (result.isNeedsPassword()) {
+            redirectUrl.append("&needsPassword=true");
+        }
+
+        return new RedirectView(redirectUrl.toString());
     }
 
     /* ===================== Members ===================== */
