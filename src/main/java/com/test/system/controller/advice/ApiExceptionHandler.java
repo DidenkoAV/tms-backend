@@ -231,6 +231,12 @@ public class ApiExceptionHandler {
         return response(HttpStatus.TOO_MANY_REQUESTS, "rate_limit_exceeded", ex.getMessage());
     }
 
+    @ExceptionHandler(com.test.system.exceptions.security.RateLimitExceededException.class)
+    public ResponseEntity<ErrorResponse> handleRateLimitExceeded(com.test.system.exceptions.security.RateLimitExceededException ex) {
+        logWarn(429, "Too Many Requests", ex.getMessage());
+        return response(HttpStatus.TOO_MANY_REQUESTS, "rate_limit_exceeded", ex.getMessage());
+    }
+
     // ========================================================================
     // Jira Integration (404 / 500)
     // ========================================================================

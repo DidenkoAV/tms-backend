@@ -8,9 +8,12 @@ import com.test.system.dto.group.management.RenameGroupRequest;
 import com.test.system.dto.group.member.ChangeMemberRoleRequest;
 import com.test.system.dto.group.member.GroupMemberResponse;
 import com.test.system.exceptions.auth.UnauthorizedException;
+import com.test.system.exceptions.security.RateLimitExceededException;
+import com.test.system.service.authorization.user.UserProfileService;
 import com.test.system.service.group.GroupInvitationService;
 import com.test.system.service.group.GroupManagementService;
 import com.test.system.service.group.GroupMemberService;
+import com.test.system.service.security.RateLimitService;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -35,6 +38,8 @@ public class GroupController {
     private final GroupManagementService groupManagementService;
     private final GroupInvitationService invitationService;
     private final GroupMemberService memberService;
+    private final RateLimitService rateLimitService;
+    private final UserProfileService userProfileService;
 
     @Value("${app.public-base-url:http://localhost:5173}")
     private String frontendBaseUrl;
@@ -126,7 +131,15 @@ public class GroupController {
     public void inviteUserToGroup(@PathVariable Long groupId,
                                    @RequestBody InviteMemberRequest rq,
                                    @AuthenticationPrincipal UserDetails principal) {
-        invitationService.inviteUserToGroup(groupId, requireEmail(principal), rq.email());
+        String email = requireEmail(principal);
+        Long userId = userProfileService.getUserByEmail(email).getId();
+
+        // Rate limiting: 10 invites per hour per user
+        if (!rateLimitService.allowInvite(userId)) {
+            throw new RateLimitExceededException("Too many invitations sent. Please try again later.");
+        }
+
+        invitationService.inviteUserToGroup(groupId, email, rq.email());
     }
 
     /**

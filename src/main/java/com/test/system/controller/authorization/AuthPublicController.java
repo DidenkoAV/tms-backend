@@ -6,7 +6,9 @@ import com.test.system.dto.authorization.auth.RegisterRequest;
 import com.test.system.dto.authorization.common.StatusResponse;
 import com.test.system.dto.authorization.password.ResetPasswordRequest;
 import com.test.system.dto.authorization.password.SetPasswordRequest;
+import com.test.system.exceptions.security.RateLimitExceededException;
 import com.test.system.service.authorization.user.UserAuthenticationService;
+import com.test.system.service.security.RateLimitService;
 import com.test.system.utils.logging.LoggingUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -32,6 +34,7 @@ public class AuthPublicController {
     private static final Logger log = LoggerFactory.getLogger(AuthPublicController.class);
 
     private final UserAuthenticationService authService;
+    private final RateLimitService rateLimitService;
 
     @Operation(
             summary = "Register new user",
@@ -54,7 +57,15 @@ public class AuthPublicController {
             )
     )
     @PostMapping("/register")
-    public ResponseEntity<StatusResponse> register(@RequestBody @Valid RegisterRequest req) {
+    public ResponseEntity<StatusResponse> register(
+            @RequestBody @Valid RegisterRequest req,
+            HttpServletRequest request
+    ) {
+        // Rate limiting: 3 registrations per hour per IP
+        if (!rateLimitService.allowRegister(request)) {
+            throw new RateLimitExceededException("Too many registration attempts. Please try again later.");
+        }
+
         String email = safeEmail(req.email());
         log.info("Registration attempt for email: {}", email);
 
@@ -120,6 +131,11 @@ public class AuthPublicController {
             @RequestBody @Valid LoginRequest req,
             HttpServletRequest request
     ) {
+        // Rate limiting: 5 attempts per minute per IP
+        if (!rateLimitService.allowLogin(request)) {
+            throw new RateLimitExceededException("Too many login attempts. Please try again later.");
+        }
+
         String email = safeEmail(req.email());
         log.info("Login attempt for email: {}", email);
 
@@ -148,7 +164,14 @@ public class AuthPublicController {
 
     @PostMapping("/password/request-reset")
     public ResponseEntity<StatusResponse> requestReset(@RequestParam("email") String email) {
-        authService.initiatePasswordReset(safeEmail(email));
+        String safeEmail = safeEmail(email);
+
+        // Rate limiting: 3 requests per hour per email
+        if (!rateLimitService.allowPasswordReset(safeEmail)) {
+            throw new RateLimitExceededException("Too many password reset requests. Please try again later.");
+        }
+
+        authService.initiatePasswordReset(safeEmail);
         return ResponseEntity.ok(StatusResponse.sent());
     }
 

@@ -6,6 +6,7 @@ import com.test.system.dto.jira.response.JiraCreateIssueApiResponse;
 import com.test.system.dto.jira.response.JiraCreateMetadataApiResponse;
 import com.test.system.dto.jira.response.JiraIssueApiResponse;
 import com.test.system.dto.jira.response.JiraMyselfApiResponse;
+import com.test.system.dto.jira.response.JiraSearchApiResponse;
 import com.test.system.exceptions.jira.JiraApiException;
 import com.test.system.exceptions.jira.JiraNotFoundException;
 import com.test.system.model.jira.JiraConnection;
@@ -22,6 +23,7 @@ import org.springframework.web.client.RestClientResponseException;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -88,6 +90,55 @@ public class JiraHttpClient {
         }
 
         return parser.parseIssueDetails(apiResponse, issueKey);
+    }
+
+    /**
+     * Batch fetch multiple issues using JQL search.
+     * This is much more efficient than calling getJiraIssueDetails() for each issue.
+     *
+     * @param conn Jira connection
+     * @param issueKeys list of issue keys to fetch (e.g., ["AUTO-123", "AUTO-456"])
+     * @return Map where key is issueKey and value is issue details
+     */
+    public Map<String, JiraIssueDetailsResponse> getJiraIssueDetailsBatch(JiraConnection conn, List<String> issueKeys) {
+        if (issueKeys == null || issueKeys.isEmpty()) {
+            return Map.of();
+        }
+
+        log.debug("[Jira] Batch get issue details: count={}", issueKeys.size());
+
+        // Build JQL query: key IN (AUTO-123, AUTO-456, ...)
+        String jql = "key IN (" + String.join(",", issueKeys) + ")";
+
+        // Build request payload
+        String payload = String.format("""
+            {
+                "jql": "%s",
+                "maxResults": %d,
+                "fields": ["summary", "description", "status", "reporter", "priority", "attachment", "issuetype"]
+            }
+            """, jql, issueKeys.size());
+
+        JiraSearchApiResponse response = post(conn, JiraApiEndpoint.SEARCH_ISSUES.getPath(), payload, JiraSearchApiResponse.class);
+
+        if (response == null || response.issues() == null) {
+            log.warn("[Jira] Batch search returned null");
+            return Map.of();
+        }
+
+        // Parse and map results
+        Map<String, JiraIssueDetailsResponse> result = new HashMap<>();
+        for (JiraIssueApiResponse issue : response.issues()) {
+            try {
+                JiraIssueDetailsResponse details = parser.parseIssueDetails(issue, issue.key());
+                result.put(issue.key(), details);
+            } catch (Exception e) {
+                log.warn("[Jira] Failed to parse issue {}: {}", issue.key(), e.getMessage());
+            }
+        }
+
+        log.debug("[Jira] Batch fetched {} issues successfully", result.size());
+        return result;
     }
 
     // ========== Private HTTP Methods ==========

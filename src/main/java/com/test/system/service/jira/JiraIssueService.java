@@ -210,6 +210,24 @@ public class JiraIssueService {
         return httpClient.getJiraIssueDetails(conn, issueKey);
     }
 
+    /**
+     * Batch fetch details for multiple Jira issues in ONE API call.
+     * This is much more efficient than calling getIssueDetails() for each issue.
+     *
+     * @param groupId the group ID
+     * @param issueKeys list of issue keys to fetch
+     * @return Map where key is issueKey and value is issue details
+     */
+    public Map<String, JiraIssueDetailsResponse> getIssueDetailsBatch(Long groupId, List<String> issueKeys) {
+        if (issueKeys == null || issueKeys.isEmpty()) {
+            return new HashMap<>();
+        }
+
+        log.info("[JiraIssue] GetDetailsBatch: groupId={}, count={}", groupId, issueKeys.size());
+        JiraConnection conn = connectionService.getConnectionEntity(groupId);
+        return httpClient.getJiraIssueDetailsBatch(conn, issueKeys);
+    }
+
     private List<TestCaseIssue> getIssuesForTestCase(Long testCaseId) {
         return issueLinks.findByTestCaseId(testCaseId);
     }

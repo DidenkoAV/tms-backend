@@ -77,6 +77,7 @@ public class JiraProjectStatsService {
 
     /**
      * Gets stats for a single project.
+     * OPTIMIZED: Uses batch fetching to get all issue details in ONE Jira API call.
      */
     public ProjectIssueStatsResponse getProjectStats(Long groupId, Long projectId) {
         List<TestCase> cases = testCases.findAllByProjectId(projectId);
@@ -85,21 +86,24 @@ public class JiraProjectStatsService {
         }
 
         List<TestCaseIssue> allIssues = issueLinks.findByTestCaseIn(cases);
+        if (allIssues.isEmpty()) {
+            return new ProjectIssueStatsResponse(0, Map.of());
+        }
 
-        Map<String, Long> statusCounts = allIssues.stream()
-                .map(issue -> resolveStatus(groupId, issue.getIssueKey()))
+        // OPTIMIZATION: Batch fetch all issue details in ONE API call
+        List<String> issueKeys = allIssues.stream()
+                .map(TestCaseIssue::getIssueKey)
+                .toList();
+
+        Map<String, JiraIssueDetailsResponse> detailsMap = issueService.getIssueDetailsBatch(groupId, issueKeys);
+
+        // Count statuses
+        Map<String, Long> statusCounts = detailsMap.values().stream()
+                .map(JiraIssueDetailsResponse::status)
                 .filter(status -> status != null && !status.isBlank())
                 .collect(Collectors.groupingBy(s -> s, Collectors.counting()));
 
         return new ProjectIssueStatsResponse(allIssues.size(), statusCounts);
-    }
-
-    private String resolveStatus(Long groupId, String issueKey) {
-        try {
-            return issueService.getIssueDetails(groupId, issueKey).status();
-        } catch (RuntimeException e) {
-            return null;
-        }
     }
 
     private ProjectIssueStatsResponse mergeStats(List<ProjectIssueStatsResponse> statsList) {
@@ -164,6 +168,7 @@ public class JiraProjectStatsService {
 
     /**
      * Gets detailed stats for a single project.
+     * OPTIMIZED: Uses batch fetching to get all issue details in ONE Jira API call.
      */
     public DetailedIssueStatsResponse getProjectDetailedStats(Long groupId, Long projectId) {
         List<TestCase> cases = testCases.findAllByProjectId(projectId);
@@ -172,11 +177,19 @@ public class JiraProjectStatsService {
         }
 
         List<TestCaseIssue> allIssues = issueLinks.findByTestCaseIn(cases);
-        List<JiraIssueDetailsResponse> issueDetails = allIssues.stream()
-                .map(issue -> resolveIssueDetails(groupId, issue.getIssueKey()))
-                .filter(details -> details != null)
+        if (allIssues.isEmpty()) {
+            return new DetailedIssueStatsResponse(0, Map.of(), Map.of(), Map.of(), Map.of());
+        }
+
+        // OPTIMIZATION: Batch fetch all issue details in ONE API call
+        List<String> issueKeys = allIssues.stream()
+                .map(TestCaseIssue::getIssueKey)
                 .toList();
 
+        Map<String, JiraIssueDetailsResponse> detailsMap = issueService.getIssueDetailsBatch(groupId, issueKeys);
+        List<JiraIssueDetailsResponse> issueDetails = new java.util.ArrayList<>(detailsMap.values());
+
+        // Calculate statistics
         Map<String, Long> statusCounts = issueDetails.stream()
                 .map(JiraIssueDetailsResponse::status)
                 .filter(status -> status != null && !status.isBlank())
@@ -204,15 +217,6 @@ public class JiraProjectStatsService {
                 authorCounts,
                 priorityCounts
         );
-    }
-
-    private JiraIssueDetailsResponse resolveIssueDetails(Long groupId, String issueKey) {
-        try {
-            return issueService.getIssueDetails(groupId, issueKey);
-        } catch (RuntimeException e) {
-            log.warn("[JiraProjectStats] Failed to get details for issue {}: {}", issueKey, e.getMessage());
-            return null;
-        }
     }
 
     private DetailedIssueStatsResponse mergeDetailedStats(List<DetailedIssueStatsResponse> statsList) {

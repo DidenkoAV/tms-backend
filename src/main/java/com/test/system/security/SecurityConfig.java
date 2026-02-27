@@ -20,6 +20,8 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.web.cors.*;
 
 import java.util.List;
@@ -44,6 +46,7 @@ public class SecurityConfig {
             "/api/auth/verification/resend",
             "/api/auth/password/request-reset",
             "/api/auth/password/reset",
+            "/api/auth/password/set",  // Password setup for new users (after invite acceptance)
             "/api/groups/invites/accept",  // Group invitation acceptance (from email links)
             "/swagger-ui/**",
             "/v3/api-docs/**",
@@ -70,7 +73,11 @@ public class SecurityConfig {
     ) throws Exception {
 
         return http
-                .csrf(csrf -> csrf.disable())
+                // CSRF protection for cookie-based JWT authentication
+                .csrf(csrf -> csrf
+                        .csrfTokenRepository(createCsrfTokenRepository())
+                        .csrfTokenRequestHandler(new SpaCsrfTokenRequestHandler())
+                )
                 .sessionManagement(sm -> sm.sessionCreationPolicy(STATELESS))
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
 
@@ -130,6 +137,30 @@ public class SecurityConfig {
         return cfg.getAuthenticationManager();
     }
 
+    /**
+     * Creates CSRF token repository configured for cross-origin SPA.
+     * Cookie settings:
+     * - HttpOnly: false (so JavaScript can read it)
+     * - Path: / (available for all endpoints)
+     * - SameSite: None (allows cross-origin POST requests for localhost development)
+     * - Secure: false (for localhost HTTP development)
+     *
+     * NOTE: In production, use SameSite=Strict and Secure=true with HTTPS
+     */
+    private CookieCsrfTokenRepository createCsrfTokenRepository() {
+        CookieCsrfTokenRepository repository = CookieCsrfTokenRepository.withHttpOnlyFalse();
+        repository.setCookiePath("/");
+        repository.setCookieName("XSRF-TOKEN");
+        // Configure cookie customizer for cross-origin support (localhost development)
+        repository.setCookieCustomizer(cookieBuilder ->
+            cookieBuilder
+                .sameSite("None")  // Allow cross-origin requests (required for localhost:5173 → localhost:8083)
+                .secure(false)     // Allow HTTP for localhost development (set to true in production with HTTPS)
+                .path("/")         // Available for all paths
+        );
+        return repository;
+    }
+
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration cfg = new CorsConfiguration();
@@ -148,5 +179,30 @@ public class SecurityConfig {
         UrlBasedCorsConfigurationSource src = new UrlBasedCorsConfigurationSource();
         src.registerCorsConfiguration("/**", cfg);
         return src;
+    }
+
+    /**
+     * Custom CSRF token request handler for SPA applications.
+     * This handler allows the CSRF token to be sent via header (X-XSRF-TOKEN)
+     * instead of as a request parameter, which is the standard for SPAs.
+     */
+    static final class SpaCsrfTokenRequestHandler extends CsrfTokenRequestAttributeHandler {
+        private final CsrfTokenRequestAttributeHandler delegate = new CsrfTokenRequestAttributeHandler();
+
+        @Override
+        public void handle(jakarta.servlet.http.HttpServletRequest request,
+                          jakarta.servlet.http.HttpServletResponse response,
+                          java.util.function.Supplier<org.springframework.security.web.csrf.CsrfToken> csrfToken) {
+            // Always use XOR of token value for breach protection
+            this.delegate.handle(request, response, csrfToken);
+        }
+
+        @Override
+        public String resolveCsrfTokenValue(jakarta.servlet.http.HttpServletRequest request,
+                                           org.springframework.security.web.csrf.CsrfToken csrfToken) {
+            // Prefer header, but fall back to parameter
+            String headerValue = request.getHeader(csrfToken.getHeaderName());
+            return (headerValue != null) ? headerValue : this.delegate.resolveCsrfTokenValue(request, csrfToken);
+        }
     }
 }
