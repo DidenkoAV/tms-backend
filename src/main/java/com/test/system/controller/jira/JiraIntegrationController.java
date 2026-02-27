@@ -76,9 +76,14 @@ public class JiraIntegrationController {
     @GetMapping("/issues/{groupId}/{testCaseId}")
     public List<TestCaseIssueResponse> listJiraIssues(
             @PathVariable Long groupId,
-            @PathVariable Long testCaseId
+            @PathVariable Long testCaseId,
+            @RequestParam(name = "withDetails", defaultValue = "true") boolean withDetails
     ) {
-        return issueService.listJiraIssues(groupId, testCaseId);
+        if (withDetails) {
+            return issueService.listJiraIssuesWithDetails(groupId, testCaseId);
+        } else {
+            return issueService.listJiraIssues(groupId, testCaseId);
+        }
     }
 
     /**
