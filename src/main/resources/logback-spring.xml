@@ -51,8 +51,8 @@
 
     <!-- Hibernate -->
     <logger name="org.hibernate" level="WARN"/>
-    <logger name="org.hibernate.SQL" level="DEBUG"/>
-    <logger name="org.hibernate.type.descriptor.sql.BasicBinder" level="TRACE"/>
+    <logger name="org.hibernate.SQL" level="WARN"/>
+    <logger name="org.hibernate.type.descriptor.sql.BasicBinder" level="WARN"/>
 
     <!-- Flyway -->
     <logger name="org.flywaydb" level="INFO"/>
@@ -73,8 +73,8 @@
 
     <!-- Profile-specific configurations -->
     <springProfile name="dev">
-        <logger name="com.test.system" level="DEBUG"/>
-        <logger name="org.springframework.web" level="DEBUG"/>
+        <logger name="com.test.system" level="INFO"/>
+        <logger name="org.springframework.web" level="INFO"/>
     </springProfile>
 
     <springProfile name="prod">
@@ -83,4 +83,3 @@
     </springProfile>
 
 </configuration>
-

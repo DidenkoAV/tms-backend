@@ -6,6 +6,7 @@ import com.test.system.component.testcase.validator.TestCaseValidator;
 import com.test.system.dto.testcase.mapper.LookupMaps;
 import com.test.system.dto.testcase.request.CreateTestCaseRequest;
 import com.test.system.dto.testcase.request.UpdateTestCaseRequest;
+import com.test.system.dto.testcase.response.TestCasePageResponse;
 import com.test.system.dto.testcase.response.TestCaseResponse;
 import com.test.system.exceptions.common.NotFoundException;
 import com.test.system.model.cases.TestCase;
@@ -16,9 +17,12 @@ import com.test.system.repository.run.TestRunCaseRepository;
 import com.test.system.repository.testcase.TestCaseRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.LinkedHashSet;
 import java.util.List;
 
 /**
@@ -96,6 +100,50 @@ public class TestCaseService {
     }
 
     /**
+     * List test cases with server-side pagination and optional title filter.
+     */
+    @Transactional(readOnly = true)
+    public TestCasePageResponse listTestCasesPageByProject(Long projectId, Long suiteId, String query, Integer page, Integer size) {
+        int safePage = page == null || page < 0 ? 0 : page;
+        int safeSize = size == null || size < 1 ? 100 : Math.min(size, 200);
+        String q = query == null ? "" : query.trim();
+
+        var pageable = PageRequest.of(
+                safePage,
+                safeSize,
+                Sort.by(Sort.Order.asc("sortIndex"), Sort.Order.asc("createdAt"))
+        );
+        var paged = testCaseRepository.findPageActiveByProjectWithFilters(projectId, suiteId, q, pageable);
+
+        LookupMaps lookups = lookupResolver.resolve(paged.getContent());
+        List<TestCaseResponse> items = paged.getContent().stream()
+                .map(tc -> mapper.toResponse(tc, lookups))
+                .toList();
+
+        return new TestCasePageResponse(items, safePage, safeSize, paged.getTotalElements());
+    }
+
+    /**
+     * List specific test cases by project and IDs.
+     */
+    @Transactional(readOnly = true)
+    public List<TestCaseResponse> listTestCasesByProjectAndIds(Long projectId, List<Long> caseIds) {
+        log.info("{} list by ids: projectId={}, requested={}", LOG_PREFIX, projectId, caseIds == null ? 0 : caseIds.size());
+
+        if (caseIds == null || caseIds.isEmpty()) {
+            return List.of();
+        }
+
+        List<Long> uniqueIds = List.copyOf(new LinkedHashSet<>(caseIds));
+        List<TestCase> cases = testCaseRepository.findAllActiveByProjectIdAndIdIn(projectId, uniqueIds);
+        LookupMaps lookups = lookupResolver.resolve(cases);
+
+        return cases.stream()
+                .map(tc -> mapper.toResponse(tc, lookups))
+                .toList();
+    }
+
+    /**
      * Get test case by ID.
      */
     @Transactional(readOnly = true)
@@ -161,6 +209,41 @@ public class TestCaseService {
         runCaseRepository.deleteByCaseId(id);
     }
 
+    /**
+     * Archive multiple test cases from one project in a single transaction.
+     */
+    @Transactional
+    public int archiveTestCases(Long projectId, List<Long> caseIds) {
+        if (caseIds == null || caseIds.isEmpty()) {
+            log.warn("{} archive batch: projectId={}, empty case id list", LOG_PREFIX, projectId);
+            return 0;
+        }
+
+        List<Long> uniqueIds = List.copyOf(new LinkedHashSet<>(caseIds));
+        log.info("{} archive batch: projectId={}, requested={}", LOG_PREFIX, projectId, uniqueIds.size());
+
+        List<TestCase> casesToArchive = testCaseRepository.findAllActiveByProjectIdAndIdIn(projectId, uniqueIds);
+        if (casesToArchive.isEmpty()) {
+            log.warn("{} archive batch: projectId={}, nothing to archive", LOG_PREFIX, projectId);
+            return 0;
+        }
+
+        var now = timeProvider.now();
+        for (TestCase testCase : casesToArchive) {
+            testCase.setArchived(true);
+            testCase.setUpdatedAt(now);
+        }
+        testCaseRepository.saveAll(casesToArchive);
+
+        List<Long> archivedCaseIds = casesToArchive.stream()
+                .map(TestCase::getId)
+                .toList();
+        runCaseRepository.deleteByCaseIdIn(archivedCaseIds);
+
+        log.info("{} archive batch done: projectId={}, archived={}", LOG_PREFIX, projectId, archivedCaseIds.size());
+        return archivedCaseIds.size();
+    }
+
     /* ============================================================
        Helper methods
        ============================================================ */
@@ -169,4 +252,4 @@ public class TestCaseService {
         return testCaseRepository.findActiveById(id)
                 .orElseThrow(() -> new NotFoundException("Case not found"));
     }
-}
+}

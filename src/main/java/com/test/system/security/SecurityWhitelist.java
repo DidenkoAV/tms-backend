@@ -26,11 +26,13 @@ public class SecurityWhitelist {
             // Authentication endpoints
             "/api/auth/register",
             "/api/auth/login",
+            "/api/auth/csrf",
             "/api/auth/logout",
             "/api/auth/verify",
             "/api/auth/verification/resend",
             "/api/auth/password/request-reset",
             "/api/auth/password/reset",
+            "/api/auth/password/set",
 
             // Group invitations (from email links)
             "/api/groups/invites/accept",
@@ -81,4 +83,3 @@ public class SecurityWhitelist {
     }
 
 }
-

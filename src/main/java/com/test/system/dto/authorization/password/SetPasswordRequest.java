@@ -8,9 +8,11 @@ import jakarta.validation.constraints.NotBlank;
 public record SetPasswordRequest(
         @NotBlank(message = "Email is required")
         String email,
-        
+
+        @NotBlank(message = "Token is required")
+        String token,
+
         @NotBlank(message = "Password is required")
         String password
 ) {
 }
-

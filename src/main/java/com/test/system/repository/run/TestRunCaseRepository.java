@@ -15,6 +15,18 @@ import java.util.Optional;
  */
 public interface TestRunCaseRepository extends JpaRepository<RunCase, Long> {
 
+    interface MilestoneStatusAggregate {
+        Long getMilestoneId();
+        Long getStatusId();
+        Long getTotal();
+    }
+
+    interface RunStatusAggregate {
+        Long getRunId();
+        Long getStatusId();
+        Long getTotal();
+    }
+
     /**
      * Checks if a specific test case is included in a run.
      *
@@ -92,5 +104,46 @@ public interface TestRunCaseRepository extends JpaRepository<RunCase, Long> {
      * @return number of run cases deleted
      */
     int deleteByCaseIdIn(Collection<Long> caseIds);
-}
 
+    /**
+     * Counts run cases grouped by milestone and status for all active milestones/runs in a project.
+     *
+     * @param projectId the project ID
+     * @return aggregated rows: milestoneId + statusId + total
+     */
+    @Query("""
+           SELECT m.id AS milestoneId,
+                  rc.currentStatusId AS statusId,
+                  COUNT(rc.id) AS total
+           FROM Milestone m
+           JOIN m.runs r
+           JOIN RunCase rc ON rc.runId = r.id
+           WHERE m.projectId = :projectId
+             AND m.archived = false
+             AND r.archived = false
+             AND rc.currentStatusId IS NOT NULL
+           GROUP BY m.id, rc.currentStatusId
+           """)
+    List<MilestoneStatusAggregate> countMilestoneStatusCountsByProjectId(@Param("projectId") Long projectId);
+
+    /**
+     * Counts run cases grouped by run and status for all active runs in a project.
+     *
+     * @param projectId the project ID
+     * @return aggregated rows: runId + statusId + total
+     */
+    @Query("""
+           SELECT r.id AS runId,
+                  rc.currentStatusId AS statusId,
+                  COUNT(rc.id) AS total
+           FROM Run r
+           JOIN RunCase rc ON rc.runId = r.id
+           JOIN TestCase tc ON tc.id = rc.caseId
+           WHERE r.projectId = :projectId
+             AND r.archived = false
+             AND rc.currentStatusId IS NOT NULL
+             AND (tc.archived = false OR tc.archived IS NULL)
+           GROUP BY r.id, rc.currentStatusId
+           """)
+    List<RunStatusAggregate> countRunStatusCountsByProjectId(@Param("projectId") Long projectId);
+}

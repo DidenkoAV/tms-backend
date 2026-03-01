@@ -1,6 +1,8 @@
 package com.test.system.repository.testcase;
 
 import com.test.system.model.cases.TestCase;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -53,6 +55,31 @@ public interface TestCaseRepository extends JpaRepository<TestCase, Long> {
     List<TestCase> findAllActiveBySuiteId(@Param("projectId") Long projectId, @Param("suiteId") Long suiteId);
 
     /**
+     * Finds non-archived test cases in a project by optional suite and title filter with pagination.
+     */
+    @Query(value = """
+            SELECT tc
+            FROM TestCase tc
+            WHERE tc.projectId = :projectId
+              AND tc.archived = false
+              AND (:suiteId IS NULL OR tc.suiteId = :suiteId)
+              AND (:query IS NULL OR :query = '' OR LOWER(tc.title) LIKE LOWER(CONCAT('%', :query, '%')))
+            ORDER BY tc.sortIndex ASC, tc.createdAt ASC
+            """,
+            countQuery = """
+            SELECT COUNT(tc)
+            FROM TestCase tc
+            WHERE tc.projectId = :projectId
+              AND tc.archived = false
+              AND (:suiteId IS NULL OR tc.suiteId = :suiteId)
+              AND (:query IS NULL OR :query = '' OR LOWER(tc.title) LIKE LOWER(CONCAT('%', :query, '%')))
+            """)
+    Page<TestCase> findPageActiveByProjectWithFilters(@Param("projectId") Long projectId,
+                                                      @Param("suiteId") Long suiteId,
+                                                      @Param("query") String query,
+                                                      Pageable pageable);
+
+    /**
      * Finds a non-archived test case by ID.
      *
      * @param id the test case ID
@@ -89,6 +116,16 @@ public interface TestCaseRepository extends JpaRepository<TestCase, Long> {
     List<TestCase> findActiveByProjectId(@Param("projectId") Long projectId);
 
     /**
+     * Finds non-archived test cases by project and a list of case IDs.
+     *
+     * @param projectId the project ID
+     * @param caseIds list of case IDs
+     * @return List of matching non-archived test cases
+     */
+    @Query("SELECT tc FROM TestCase tc WHERE tc.projectId = :projectId AND tc.archived = false AND tc.id IN :caseIds")
+    List<TestCase> findAllActiveByProjectIdAndIdIn(@Param("projectId") Long projectId, @Param("caseIds") List<Long> caseIds);
+
+    /**
      * Finds all non-archived test cases for multiple projects (for dashboard PDF export).
      *
      * @param projectIds list of project IDs
@@ -106,4 +143,3 @@ public interface TestCaseRepository extends JpaRepository<TestCase, Long> {
     @Query("SELECT tc FROM TestCase tc WHERE tc.suiteId IN :suiteIds AND tc.archived = false")
     List<TestCase> findAllActiveBySuiteIdIn(@Param("suiteIds") List<Long> suiteIds);
 }
-

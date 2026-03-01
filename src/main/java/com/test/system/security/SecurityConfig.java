@@ -41,6 +41,7 @@ public class SecurityConfig {
             "/api/health",
             "/api/auth/register",
             "/api/auth/login",
+            "/api/auth/csrf",
             "/api/auth/logout",
             "/api/auth/verify",
             "/api/auth/verification/resend",
@@ -142,20 +143,20 @@ public class SecurityConfig {
      * Cookie settings:
      * - HttpOnly: false (so JavaScript can read it)
      * - Path: / (available for all endpoints)
-     * - SameSite: None (allows cross-origin POST requests for localhost development)
-     * - Secure: false (for localhost HTTP development)
+     * - SameSite: Lax (works reliably for same-site SPA and localhost dev)
+     * - Secure: false (localhost HTTP development)
      *
-     * NOTE: In production, use SameSite=Strict and Secure=true with HTTPS
+     * NOTE: In production with separate domains, set SameSite=None and Secure=true with HTTPS.
      */
     private CookieCsrfTokenRepository createCsrfTokenRepository() {
         CookieCsrfTokenRepository repository = CookieCsrfTokenRepository.withHttpOnlyFalse();
         repository.setCookiePath("/");
         repository.setCookieName("XSRF-TOKEN");
-        // Configure cookie customizer for cross-origin support (localhost development)
+        // Configure cookie customizer for reliable localhost/browser behavior.
         repository.setCookieCustomizer(cookieBuilder ->
             cookieBuilder
-                .sameSite("None")  // Allow cross-origin requests (required for localhost:5173 → localhost:8083)
-                .secure(false)     // Allow HTTP for localhost development (set to true in production with HTTPS)
+                .sameSite("Lax")
+                .secure(false)
                 .path("/")         // Available for all paths
         );
         return repository;

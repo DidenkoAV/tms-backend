@@ -201,6 +201,10 @@ public class GroupController {
 
         if (result.isNeedsPassword()) {
             redirectUrl.append("&needsPassword=true");
+            if (result.getPasswordSetToken() != null && !result.getPasswordSetToken().isBlank()) {
+                redirectUrl.append("&setToken=")
+                        .append(java.net.URLEncoder.encode(result.getPasswordSetToken(), java.nio.charset.StandardCharsets.UTF_8));
+            }
         }
 
         return new RedirectView(redirectUrl.toString());

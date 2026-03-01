@@ -1,12 +1,14 @@
 package com.test.system.service.milestone;
 
 import com.test.system.dto.milestone.AddRunsToMilestoneRequest;
+import com.test.system.dto.milestone.MilestoneStatusCountResponse;
 import com.test.system.dto.run.response.RunResponse;
 import com.test.system.exceptions.common.NotFoundException;
 import com.test.system.model.milestone.Milestone;
 import com.test.system.model.run.Run;
 import com.test.system.model.user.User;
 import com.test.system.repository.milestone.MilestoneRepository;
+import com.test.system.repository.run.TestRunCaseRepository;
 import com.test.system.repository.run.TestRunRepository;
 import com.test.system.repository.user.UserRepository;
 import com.test.system.utils.StringUtils;
@@ -31,6 +33,7 @@ public class MilestoneRunService {
 
     private final MilestoneRepository milestoneRepository;
     private final TestRunRepository runRepository;
+    private final TestRunCaseRepository runCaseRepository;
     private final UserRepository userRepository;
 
     @Transactional(readOnly = true)
@@ -87,6 +90,25 @@ public class MilestoneRunService {
         milestoneRepository.save(milestone);
 
         log.info("{} removeRunFromMilestone: milestoneId={}, runId={}, removed", LOG_PREFIX, milestoneId, runId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<MilestoneStatusCountResponse> listMilestoneStatusCountsByProject(Long projectId) {
+        log.info("{} listMilestoneStatusCountsByProject: projectId={}", LOG_PREFIX, projectId);
+
+        List<MilestoneStatusCountResponse> result = runCaseRepository
+                .countMilestoneStatusCountsByProjectId(projectId)
+                .stream()
+                .map(row -> new MilestoneStatusCountResponse(
+                        row.getMilestoneId(),
+                        row.getStatusId(),
+                        row.getTotal()
+                ))
+                .toList();
+
+        log.info("{} listMilestoneStatusCountsByProject: projectId={}, rows={}", LOG_PREFIX, projectId, result.size());
+
+        return result;
     }
 
     // ========================================================================

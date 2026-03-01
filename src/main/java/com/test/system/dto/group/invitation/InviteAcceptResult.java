@@ -30,5 +30,10 @@ public class InviteAcceptResult {
      * ID of the group.
      */
     private final Long groupId;
-}
 
+    /**
+     * One-time token for setting password after invitation acceptance.
+     * Present only for placeholder users who need to set password.
+     */
+    private final String passwordSetToken;
+}

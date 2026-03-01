@@ -12,6 +12,7 @@ import com.test.system.service.jira.JiraProjectStatsService;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -30,8 +31,12 @@ public class JiraIntegrationController {
 
 
     @GetMapping("/connection/{groupId}")
-    public JiraConnectionResponse getJiraConnection(@PathVariable Long groupId) {
-        return connectionService.getJiraConnection(groupId);
+    public ResponseEntity<JiraConnectionResponse> getJiraConnection(@PathVariable Long groupId) {
+        JiraConnectionResponse response = connectionService.getJiraConnectionOrNull(groupId);
+        if (response == null) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/connection/{groupId}")

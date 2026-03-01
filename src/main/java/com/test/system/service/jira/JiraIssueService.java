@@ -195,7 +195,12 @@ public class JiraIssueService {
      */
     public List<String> getAvailableIssueTypes(Long groupId) {
         log.info("[JiraIssue] GetTypes: groupId={}", groupId);
-        JiraConnection conn = connectionService.getConnectionEntity(groupId);
+        JiraConnection conn = connectionService.findConnectionEntity(groupId)
+                .orElse(null);
+        if (conn == null) {
+            log.info("[JiraIssue] GetTypes: no Jira connection configured for groupId={}, returning empty list", groupId);
+            return List.of();
+        }
 
         JiraCreateMetadataApiResponse response = httpClient.getJiraCreateMetadata(conn, conn.getDefaultProject());
         return parser.parseIssueTypes(response);
@@ -256,4 +261,3 @@ public class JiraIssueService {
                 .build();
     }
 }
-

@@ -4,6 +4,6 @@ public enum TokenType {
     EMAIL_VERIFY,
     PASSWORD_RESET,
     EMAIL_CHANGE,
-    GROUP_INVITE
+    GROUP_INVITE,
+    PASSWORD_SET
 }
-

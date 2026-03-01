@@ -5,6 +5,7 @@ import com.test.system.dto.run.request.CreateRunRequest;
 import com.test.system.dto.run.request.UpdateRunRequest;
 import com.test.system.dto.run.response.RunCaseResponse;
 import com.test.system.dto.run.response.RunResponse;
+import com.test.system.dto.run.response.RunStatusCountResponse;
 import com.test.system.exceptions.common.NotFoundException;
 import com.test.system.exceptions.run.InvalidRunRequestException;
 import com.test.system.exceptions.run.RunCaseNotInRunException;
@@ -368,6 +369,25 @@ public class RunService {
     public List<Status> listStatuses() {
         log.info("{} listing statuses", LOG_PREFIX);
         return statusRepository.findAll();
+    }
+
+    /**
+     * Lists aggregated run status counts for all active runs in a project.
+     */
+    @Transactional(readOnly = true)
+    public List<RunStatusCountResponse> listRunStatusCountsByProject(Long projectId) {
+        log.info("{} listing run status counts: projectId={}", LOG_PREFIX, projectId);
+
+        getProjectOrThrow(projectId);
+
+        return runCaseRepository.countRunStatusCountsByProjectId(projectId)
+                .stream()
+                .map(row -> new RunStatusCountResponse(
+                        row.getRunId(),
+                        row.getStatusId(),
+                        row.getTotal()
+                ))
+                .toList();
     }
 
     /* ========== Private Helper Methods ========== */

@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Locale;
+import java.util.Objects;
 
 /**
  * Service for password management operations.
@@ -106,10 +107,21 @@ public class UserPasswordService {
      * @param newPassword new password to set
      */
     @Transactional
-    public void setPasswordForPlaceholderUser(String emailRaw, String newPassword) {
+    public void setPasswordForPlaceholderUser(String emailRaw, String setupToken, String newPassword) {
+        if (setupToken == null || setupToken.isBlank()) {
+            throw new IllegalArgumentException("PASSWORD_SET_TOKEN_REQUIRED");
+        }
+
+        var token = tokens.validateAndConsumeToken(setupToken, TokenType.PASSWORD_SET);
+        User tokenUser = token.getUser();
+
         String email = normEmail(emailRaw);
         User user = users.findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("USER_NOT_FOUND"));
+
+        if (!Objects.equals(user.getId(), tokenUser.getId())) {
+            throw new IllegalArgumentException("TOKEN_USER_MISMATCH");
+        }
 
         // Validate that this is actually a placeholder user scenario
         // (we don't enforce this strictly, but log it for monitoring)
@@ -165,4 +177,3 @@ public class UserPasswordService {
         return email == null ? "" : email.trim().toLowerCase(Locale.ROOT);
     }
 }
-

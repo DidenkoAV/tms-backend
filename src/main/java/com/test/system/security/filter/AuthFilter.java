@@ -229,12 +229,12 @@ public class AuthFilter extends OncePerRequestFilter {
     private void clearCookie(HttpServletRequest request, HttpServletResponse response) {
         log.debug("[Auth] Clearing authentication cookie");
 
-        // Use maxAge=-1 to delete immediately (more reliable than maxAge=0)
+        // Use maxAge=0 to explicitly expire cookie in browser
         Cookie cookie = new Cookie(cookieName, "");
         cookie.setHttpOnly(true);
         cookie.setSecure(isSecure(request));
         cookie.setPath(cookiePath);
-        cookie.setMaxAge(-1);  // -1 = delete immediately
+        cookie.setMaxAge(0);
 
         if (!cookieDomain.isBlank()) {
             cookie.setDomain(cookieDomain);

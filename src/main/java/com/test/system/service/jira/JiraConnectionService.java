@@ -13,6 +13,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Optional;
+
 /**
  * Manages Jira connections for groups.
  */
@@ -36,11 +38,27 @@ public class JiraConnectionService {
     }
 
     /**
+     * Gets Jira connection for a group, returning null when not configured.
+     */
+    public JiraConnectionResponse getJiraConnectionOrNull(Long groupId) {
+        return findConnectionEntity(groupId)
+                .map(mapper::toConnectionDto)
+                .orElse(null);
+    }
+
+    /**
      * Gets Jira connection entity (for internal use).
      */
     JiraConnection getConnectionEntity(Long groupId) {
         return connections.findByGroupId(groupId)
                 .orElseThrow(() -> new EntityNotFoundException("No Jira connection for group " + groupId));
+    }
+
+    /**
+     * Finds Jira connection entity without throwing when absent.
+     */
+    Optional<JiraConnection> findConnectionEntity(Long groupId) {
+        return connections.findByGroupId(groupId);
     }
 
     /**
@@ -93,4 +111,3 @@ public class JiraConnectionService {
         conn.setDefaultIssueType(req.defaultIssueType());
     }
 }
-

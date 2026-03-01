@@ -11,6 +11,9 @@ import org.springframework.web.util.ContentCachingRequestWrapper;
 import org.springframework.web.util.ContentCachingResponseWrapper;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -23,6 +26,9 @@ public class RequestLoggingFilter implements Filter {
     private static final Logger log = LoggerFactory.getLogger(RequestLoggingFilter.class);
     private static final String REQUEST_ID = "requestId";
     private static final String USER_ID = "userId";
+    private static final Set<String> SENSITIVE_QUERY_KEYS = new HashSet<>(Arrays.asList(
+            "token", "password", "secret", "code", "authorization", "jwt", "api_key", "apikey"
+    ));
 
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
@@ -72,7 +78,7 @@ public class RequestLoggingFilter implements Filter {
         logMessage.append(String.format("→ HTTP Request [%s] %s %s", requestId, method, uri));
         
         if (queryString != null) {
-            logMessage.append("?").append(queryString);
+            logMessage.append("?").append(maskSensitiveQueryString(queryString));
         }
         
         logMessage.append(String.format(" | IP: %s", remoteAddr));
@@ -82,6 +88,30 @@ public class RequestLoggingFilter implements Filter {
         }
 
         log.info(logMessage.toString());
+    }
+
+    private String maskSensitiveQueryString(String queryString) {
+        String[] pairs = queryString.split("&");
+        for (int i = 0; i < pairs.length; i++) {
+            String pair = pairs[i];
+            int eqIdx = pair.indexOf('=');
+            String key = eqIdx >= 0 ? pair.substring(0, eqIdx) : pair;
+
+            if (isSensitiveKey(key)) {
+                pairs[i] = key + "=***";
+            }
+        }
+        return String.join("&", pairs);
+    }
+
+    private boolean isSensitiveKey(String key) {
+        if (key == null || key.isBlank()) {
+            return false;
+        }
+        String normalized = key.trim().toLowerCase();
+        return SENSITIVE_QUERY_KEYS.contains(normalized)
+                || normalized.endsWith("_token")
+                || normalized.endsWith("token");
     }
 
     private void logResponse(HttpServletRequest request, HttpServletResponse response, 
@@ -161,4 +191,3 @@ public class RequestLoggingFilter implements Filter {
         return "";
     }
 }
-

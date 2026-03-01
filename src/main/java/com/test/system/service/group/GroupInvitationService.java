@@ -17,6 +17,7 @@ import com.test.system.repository.auth.UserRoleRepository;
 import com.test.system.repository.group.GroupMembershipRepository;
 import com.test.system.repository.user.UserRepository;
 import com.test.system.service.authorization.core.EmailTokenService;
+import com.test.system.service.authorization.user.UserRegistrationService;
 import com.test.system.service.mail.MailService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -57,12 +58,16 @@ public class GroupInvitationService {
     private final UserRepository users;
     private final UserRoleRepository roles;
     private final PasswordEncoder encoder;
+    private final UserRegistrationService userRegistrationService;
 
     @Value("${app.groups.max-members:3}")
     private int maxMembers;
 
     @Value("${app.groups.invite.ttl-hours:72}")
     private int inviteTtlHours;
+
+    @Value("${app.auth.password-set-ttl-hours:2}")
+    private int passwordSetTtlHours;
 
     /**
      * Invites a user to join a group.
@@ -186,6 +191,9 @@ public class GroupInvitationService {
             users.save(invitee);
             log.info("{} enabled placeholder user: userId={}, email={}", LOG_PREFIX, invitee.getId(), invitee.getEmail());
         }
+
+        // Personal group must always exist for every user, even for placeholder-invite flow.
+        userRegistrationService.ensurePersonalGroup(invitee);
 
         // Get group information for the result
         Group group = accessControl.requireGroup(groupId);
@@ -351,11 +359,19 @@ public class GroupInvitationService {
      * Builds the result object for invitation acceptance.
      */
     private InviteAcceptResult buildAcceptResult(User user, Group group, boolean needsPassword) {
+        String passwordSetToken = null;
+        if (needsPassword) {
+            passwordSetToken = EmailTokenService.newRawToken();
+            tokens.deleteActiveTokens(user.getId(), TokenType.PASSWORD_SET);
+            tokens.createToken(user, TokenType.PASSWORD_SET, Duration.ofHours(passwordSetTtlHours), passwordSetToken);
+        }
+
         return InviteAcceptResult.builder()
                 .needsPassword(needsPassword)
                 .email(user.getEmail())
                 .groupName(group.getName())
                 .groupId(group.getId())
+                .passwordSetToken(passwordSetToken)
                 .build();
     }
 }

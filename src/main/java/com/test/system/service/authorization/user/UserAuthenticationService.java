@@ -125,13 +125,13 @@ public class UserAuthenticationService {
     public ResponseEntity<Void> logoutUser(HttpServletRequest request) {
         log.info("{} logging out user", LOG_PREFIX);
 
-        // Use maxAge=-1 to delete cookie immediately (more reliable than maxAge=0)
+        // Use maxAge=0 to explicitly expire cookie in browser
         ResponseCookie expiredCookie = ResponseCookie
                 .from(jwtCookieName, "")
                 .httpOnly(true)
                 .secure(isSecure(request))
                 .path(jwtCookiePath)
-                .maxAge(-1)  // -1 = delete immediately
+                .maxAge(0)
                 .sameSite(normalizeSameSite(jwtCookieSameSite))
                 .domain(jwtCookieDomain.isBlank() ? null : jwtCookieDomain)
                 .build();
@@ -170,11 +170,12 @@ public class UserAuthenticationService {
     @Transactional
     public ResponseEntity<AuthenticationResponse> setPasswordAndLogin(
             String email,
+            String setupToken,
             String password,
             HttpServletRequest request
     ) {
         log.info("{} setting password for placeholder user: email={}", LOG_PREFIX, email);
-        passwordService.setPasswordForPlaceholderUser(email, password);
+        passwordService.setPasswordForPlaceholderUser(email, setupToken, password);
 
         // Automatically log the user in after setting password
         return authenticateUser(email, password, request);
@@ -197,4 +198,3 @@ public class UserAuthenticationService {
                 .build();
     }
 }
-

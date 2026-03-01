@@ -2,9 +2,13 @@ package com.test.system.controller.testcase;
 
 import com.test.system.dto.testcase.importexport.TestCasesImportRequest;
 import com.test.system.dto.testcase.request.CreateTestCaseRequest;
+import com.test.system.dto.testcase.request.TestCaseBulkArchiveRequest;
+import com.test.system.dto.testcase.request.TestCaseIdsRequest;
 import com.test.system.dto.testcase.request.UpdateTestCaseRequest;
 import com.test.system.dto.testcase.response.ExportFileResponse;
 import com.test.system.dto.testcase.response.ImportTestCasesResponse;
+import com.test.system.dto.testcase.response.TestCaseBulkArchiveResponse;
+import com.test.system.dto.testcase.response.TestCasePageResponse;
 import com.test.system.dto.testcase.response.TestCaseResponse;
 import com.test.system.service.testcase.TestCaseImportExportService;
 import com.test.system.service.testcase.TestCaseService;
@@ -47,6 +51,23 @@ public class TestCaseController {
         return testCaseService.listTestCasesByProject(projectId, suiteId);
     }
 
+    @Operation(summary = "List project cases page", description = "Paginated list of non-archived cases with optional suiteId and title filter.")
+    @GetMapping("/projects/{projectId}/cases/page")
+    public TestCasePageResponse listByProjectPage(@PathVariable Long projectId,
+                                                  @RequestParam(required = false) Long suiteId,
+                                                  @RequestParam(required = false) String q,
+                                                  @RequestParam(defaultValue = "0") Integer page,
+                                                  @RequestParam(defaultValue = "100") Integer size) {
+        return testCaseService.listTestCasesPageByProject(projectId, suiteId, q, page, size);
+    }
+
+    @Operation(summary = "List project cases by ids", description = "Returns non-archived project cases for provided caseIds.")
+    @PostMapping("/projects/{projectId}/cases/by-ids")
+    public List<TestCaseResponse> listByProjectAndIds(@PathVariable Long projectId,
+                                                      @RequestBody TestCaseIdsRequest body) {
+        return testCaseService.listTestCasesByProjectAndIds(projectId, body == null ? null : body.caseIds());
+    }
+
     @Operation(summary = "Get test case", description = "Get full test case by id.")
     @GetMapping("/cases/{id}")
     public TestCaseResponse get(@PathVariable Long id) {
@@ -65,6 +86,14 @@ public class TestCaseController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void archive(@PathVariable Long id) {
         testCaseService.archiveTestCase(id);
+    }
+
+    @Operation(summary = "Archive cases in batch", description = "Soft-delete (archive) multiple project cases in one operation.")
+    @PostMapping("/projects/{projectId}/cases/bulk-archive")
+    public TestCaseBulkArchiveResponse bulkArchive(@PathVariable Long projectId,
+                                                   @Valid @RequestBody TestCaseBulkArchiveRequest body) {
+        int deletedCount = testCaseService.archiveTestCases(projectId, body.caseIds());
+        return new TestCaseBulkArchiveResponse(deletedCount);
     }
 
     /* ============================================================

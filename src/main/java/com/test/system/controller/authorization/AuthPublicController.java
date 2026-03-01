@@ -21,7 +21,10 @@ import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.*;
+import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 import static com.test.system.utils.auth.AuthWebUtils.safeEmail;
 
@@ -149,6 +152,17 @@ public class AuthPublicController {
         }
     }
 
+    /**
+     * Initializes CSRF token for SPA clients before first state-changing request.
+     */
+    @GetMapping("/csrf")
+    public ResponseEntity<Map<String, String>> csrf(CsrfToken csrfToken) {
+        return ResponseEntity.ok(Map.of(
+                "headerName", csrfToken.getHeaderName(),
+                "parameterName", csrfToken.getParameterName()
+        ));
+    }
+
     @PostMapping("/logout")
     public ResponseEntity<Void> logout(HttpServletRequest request) {
         log.info("Logout request");
@@ -199,7 +213,12 @@ public class AuthPublicController {
         String email = safeEmail(req.email());
         log.info("Set password request for email: {}", email);
 
-        ResponseEntity<AuthenticationResponse> response = authService.setPasswordAndLogin(email, req.password(), request);
+        ResponseEntity<AuthenticationResponse> response = authService.setPasswordAndLogin(
+                email,
+                req.token(),
+                req.password(),
+                request
+        );
         LoggingUtils.logAuthEvent(log, "SET_PASSWORD", email, true);
         return response;
     }

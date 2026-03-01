@@ -3,6 +3,7 @@ package com.test.system.controller.milestone;
 import com.test.system.dto.milestone.AddRunsToMilestoneRequest;
 import com.test.system.dto.milestone.CreateMilestoneRequest;
 import com.test.system.dto.milestone.MilestoneResponse;
+import com.test.system.dto.milestone.MilestoneStatusCountResponse;
 import com.test.system.dto.milestone.MilestoneUpdateRequest;
 import com.test.system.dto.run.response.RunResponse;
 import com.test.system.service.milestone.MilestoneRunService;
@@ -46,6 +47,12 @@ public class MilestoneController {
     @GetMapping("/api/projects/{projectId}/milestones")
     public List<MilestoneResponse> list(@PathVariable Long projectId) {
         return milestoneService.listMilestonesByProject(projectId);
+    }
+
+    @Operation(summary = "List milestone status counts for project")
+    @GetMapping("/api/projects/{projectId}/milestones/stats")
+    public List<MilestoneStatusCountResponse> listStats(@PathVariable Long projectId) {
+        return milestoneRunService.listMilestoneStatusCountsByProject(projectId);
     }
 
     @Operation(summary = "Get milestone")

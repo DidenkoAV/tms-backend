@@ -6,6 +6,7 @@ import com.test.system.dto.run.request.UpdateRunRequest;
 import com.test.system.dto.run.response.BulkOperationResponse;
 import com.test.system.dto.run.response.RunCaseResponse;
 import com.test.system.dto.run.response.RunResponse;
+import com.test.system.dto.run.response.RunStatusCountResponse;
 import com.test.system.model.status.Status;
 import com.test.system.service.run.RunService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -55,6 +56,15 @@ public class RunController {
     @GetMapping("/api/projects/{projectId}/runs")
     public List<RunResponse> listRunsByProject(@PathVariable Long projectId) {
         return runService.listRunsByProject(projectId);
+    }
+
+    @Operation(
+            summary = "List run status counts for a project",
+            description = "Returns aggregated run status counts grouped by run and status"
+    )
+    @GetMapping("/api/projects/{projectId}/runs/stats")
+    public List<RunStatusCountResponse> listRunStatusCountsByProject(@PathVariable Long projectId) {
+        return runService.listRunStatusCountsByProject(projectId);
     }
 
     @Operation(
