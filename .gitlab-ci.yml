@@ -1,0 +1,38 @@
+image: docker:24
+
+services:
+  - docker:24-dind
+
+stages:
+  - build
+
+variables:
+  DOCKER_TLS_CERTDIR: "/certs"
+
+  AWS_REGION: us-east-2
+
+  ECR_REGISTRY: 746902955291.dkr.ecr.us-east-2.amazonaws.com
+  ECR_REPOSITORY: testforge-backend
+
+before_script:
+  - apk add --no-cache python3 py3-pip
+  - pip install awscli
+
+  - aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
+  - aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
+  - aws configure set region $AWS_DEFAULT_REGION
+
+build-and-push:
+  stage: build
+
+  script:
+    - aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY
+
+    - docker build --platform linux/amd64 -t $ECR_REPOSITORY:latest .
+
+    - docker tag $ECR_REPOSITORY:latest $ECR_REGISTRY/$ECR_REPOSITORY:latest
+
+    - docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+
+  only:
+    - master
