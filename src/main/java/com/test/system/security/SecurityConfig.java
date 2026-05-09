@@ -9,9 +9,11 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.lang.Nullable;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -66,16 +68,17 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(
             HttpSecurity http,
             AuthenticationProvider authenticationProvider,
-            AuthFilter authFilter
-            // TODO: Re-enable OAuth2 when ClientRegistrationRepository is configured
-            // GoogleOAuth2UserLoader googleOAuth2UserLoader,
-            // GoogleOAuth2SuccessHandler googleOAuth2SuccessHandler,
-            // GoogleOAuth2FailureHandler googleOAuth2FailureHandler
+            AuthFilter authFilter,
+            @Nullable ClientRegistrationRepository clientRegistrationRepository,
+            GoogleOAuth2UserLoader googleOAuth2UserLoader,
+            GoogleOAuth2SuccessHandler googleOAuth2SuccessHandler,
+            GoogleOAuth2FailureHandler googleOAuth2FailureHandler
     ) throws Exception {
 
-        return http
+        http
                 // CSRF protection for cookie-based JWT authentication
                 .csrf(csrf -> csrf
+                        .ignoringRequestMatchers("/api/health")
                         .csrfTokenRepository(createCsrfTokenRepository())
                         .csrfTokenRequestHandler(new SpaCsrfTokenRequestHandler())
                 )
@@ -104,17 +107,19 @@ public class SecurityConfig {
                 // Authentication filter handles both JWT and PAT tokens
                 .addFilterBefore(authFilter, UsernamePasswordAuthenticationFilter.class)
 
-                // TODO: Re-enable OAuth2 when ClientRegistrationRepository is configured
-                // OAuth2 Login (Google)
-                // .oauth2Login(oauth -> oauth
-                //         .authorizationEndpoint(ep -> ep.baseUri("/oauth2/authorization"))
-                //         .redirectionEndpoint(ep -> ep.baseUri("/login/oauth2/code/*"))
-                //         .userInfoEndpoint(ue -> ue.userService(googleOAuth2UserLoader))
-                //         .successHandler(googleOAuth2SuccessHandler)
-                //         .failureHandler(googleOAuth2FailureHandler)
-                // )
+                ;
 
-                .build();
+        if (clientRegistrationRepository != null) {
+            http.oauth2Login(oauth -> oauth
+                    .authorizationEndpoint(ep -> ep.baseUri("/oauth2/authorization"))
+                    .redirectionEndpoint(ep -> ep.baseUri("/login/oauth2/code/*"))
+                    .userInfoEndpoint(ue -> ue.userService(googleOAuth2UserLoader))
+                    .successHandler(googleOAuth2SuccessHandler)
+                    .failureHandler(googleOAuth2FailureHandler)
+            );
+        }
+
+        return http.build();
     }
 
     @Bean

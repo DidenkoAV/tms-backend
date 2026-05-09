@@ -20,7 +20,7 @@ import java.io.IOException;
 @Slf4j
 public class GoogleOAuth2FailureHandler implements AuthenticationFailureHandler {
 
-    private static final String REDIRECT_LOGIN = "/login";
+    private static final String REDIRECT_LOGIN = "/";
     private static final String QUERY_OAUTH_ERROR = "oauthError";
     private static final String ERROR_GENERIC = "1";
 
@@ -45,4 +45,3 @@ public class GoogleOAuth2FailureHandler implements AuthenticationFailureHandler 
         return appPublicBaseUrl + REDIRECT_LOGIN + "?" + QUERY_OAUTH_ERROR + "=" + ERROR_GENERIC;
     }
 }
-

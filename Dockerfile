@@ -19,7 +19,7 @@ RUN mkdir -p /app/logs \
 
 COPY --from=builder /build/target/testcase-backend-0.0.1-SNAPSHOT.jar /app/app.jar
 
-EXPOSE 8080
+EXPOSE 8083
 
 USER spring
 

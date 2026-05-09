@@ -35,8 +35,8 @@ public class GoogleOAuth2SuccessHandler implements AuthenticationSuccessHandler 
     private static final String ATTR_GIVEN_NAME = "given_name";
 
     // Redirect paths
-    private static final String REDIRECT_SUCCESS = "/main";
-    private static final String REDIRECT_LOGIN = "/login";
+    private static final String REDIRECT_SUCCESS = "/projects";
+    private static final String REDIRECT_LOGIN = "/";
 
     // Error query parameters
     private static final String QUERY_OAUTH_ERROR = "oauthError";
@@ -54,7 +54,7 @@ public class GoogleOAuth2SuccessHandler implements AuthenticationSuccessHandler 
     private final JwtService jwtService;
     private final UserRegistrationService registrationService;
 
-    @Value("${APP_PUBLIC_BASE_URL:http://localhost:5173}")
+    @Value("${app.public-base-url:http://localhost:5173}")
     private String appPublicBaseUrl;
 
     @Value("${app.auth.cookie.name:app_token}")
@@ -166,4 +166,3 @@ public class GoogleOAuth2SuccessHandler implements AuthenticationSuccessHandler 
         return SAME_SITE_LAX;
     }
 }
-
